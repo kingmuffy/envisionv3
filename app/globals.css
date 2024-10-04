@@ -20,8 +20,123 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+.split-container {
+  display: flex;
+  height: 100vh;
+}
+
+.gutter {
+  background-color: #ddd;
+  cursor: col-resize;
+}
+
+.gutter.gutter-horizontal {
+  width: 10px;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+}
+
+.custom-text-field {
+  width: 90%;
+  max-width: 300px;
+  height: 30px;
+  border-radius: 8px;
+  border-color: green;
+}
+
+.custom-text-field input {
+  font-size: 12px;
+}
+
+.custom-text-field .MuiOutlinedInput-root {
+  height: 100%;
+  font-size: 8px;
+  border-radius: 8px;
+}
+
+.custom-text-field .MuiOutlinedInput-notchedOutline {
+  border-color: green !important;
+}
+/* Custom scrollbar styling */
+.custom-accordion {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.custom-accordion::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-accordion::-webkit-scrollbar-thumb {
+  background-color: green;
+  border-radius: 10px;
+}
+
+.custom-accordion::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
 }
