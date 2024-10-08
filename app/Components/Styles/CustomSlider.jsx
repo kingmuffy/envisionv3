@@ -62,7 +62,7 @@ const CustomSlider = ({
 
       {/* TextField for manual value input */}
       <TextField
-        value={value.toFixed(2)}
+        value={typeof value === "number" ? value.toFixed(2) : ""}
         onChange={onInputChange}
         sx={{
           width: "50px",
@@ -83,4 +83,3 @@ const CustomSlider = ({
 };
 
 export default CustomSlider;
-//v3 - All UI updated

@@ -35,42 +35,62 @@ import CustomSlider from "./Styles/CustomSlider.jsx";
 import CameraSettings from "./Settings/CameraSettings";
 import ColorPicker from "./Styles/ColorPicker.jsx";
 import LightSettings from "./Settings/LightSettings.jsx";
-import { MapContext } from "../MapContext";
+import { MapContext } from "../EditContext.jsx";
 import { Switch, FormControlLabel } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { ChromePicker } from "react-color"; // Import the ChromePicker
 import axios from "axios";
 const ControlGUI = ({ addMapNode }) => {
-  const { connectedMaps, materialParams, updateConnectedMaps } =
-    useContext(MapContext);
+  const {
+    connectedMaps,
+    materialParams,
+    updateConnectedMaps,
+    updateMaterialParams,
+  } = useContext(MapContext);
 
   const [open, setOpen] = useState(true);
   const [selectedIcon, setSelectedIcon] = useState("materials");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  const { updateMaterialParams } = useContext(MapContext);
+  // Initialize material parameters from context to reflect the initial values in the UI sliders.
+  //   const [bumpScale, setBumpScale] = useState(materialParams.bumpScale || 0.0);
+  const [normalX, setNormalX] = useState(materialParams.normalScaleX || 1);
+  const [normalY, setNormalY] = useState(materialParams.normalScaleY || 1);
+  const [scaleX, setScaleX] = useState(materialParams.scaleX || 1);
+  const [scaleY, setScaleY] = useState(materialParams.scaleY || 1);
+  const [displacementScale, setDisplacementScale] = useState(
+    materialParams.displacementScale || 1
+  );
+  const [displacementBias, setDisplacementBias] = useState(
+    materialParams.displacementBias || 0
+  );
+  const [metalness, setMetalness] = useState(materialParams.metalness || 0.0);
+  const [roughness, setRoughness] = useState(materialParams.roughness || 0.0);
+  const [emissive, setEmissive] = useState(
+    materialParams.emissiveIntensity || 0
+  );
+  const [envIntensity, setEnvIntensity] = useState(
+    materialParams.envMapIntensity || 0
+  );
+  const [clearcoat, setClearcoat] = useState(materialParams.clearcoat || 0);
+  const [opacity, setOpacity] = useState(materialParams.opacity || 1);
+  const [ao, setAo] = useState(materialParams.aoMapIntensity || 1);
+  const [sheen, setSheenIntensity] = useState(materialParams.sheen || 0);
+  const [sheenRoughness, setSheenRoughness] = useState(
+    materialParams.sheenRoughness || 1
+  );
+  const [sheenColor, setSheenColor] = useState(
+    materialParams.sheenColor || { r: 1, g: 1, b: 1 }
+  );
+  const [sheenEnabled, setSheenEnabled] = useState(
+    materialParams.sheenEnabled || false
+  );
+  const [emissiveColor, setEmissiveColor] = useState(
+    materialParams.emissiveColor || { r: 0, g: 0, b: 0 }
+  );
+  const [anisotropy, setAnisotropy] = useState(materialParams.anisotropy || 0);
 
-  const [bumpScale, setBumpScale] = useState(0.0);
-  const [normalX, setNormalX] = useState(1);
-  const [normalY, setNormalY] = useState(1);
-  const [scaleX, setScaleX] = useState(1);
-  const [scaleY, setScaleY] = useState(1);
-  const [displacementScale, setDisplacementScale] = useState(1);
-  const [displacementBias, setDisplacementBias] = useState(0);
-  const [metalness, setMetalness] = useState(0.0);
-  const [roughness, setRoughness] = useState(0.0);
-  const [emissive, setEmissive] = useState(0);
-  const [envIntensity, setEnvIntensity] = useState(0);
-  const [clearcoat, setClearcoat] = useState(0);
-  const [opacity, setOpacity] = useState(1);
-  const [ao, setAo] = useState(1);
-  const [sheen, setSheenIntensity] = useState(0);
-  const [sheenRoughness, setSheenRoughness] = useState(1);
-  const [sheenColor, setSheenColor] = useState({ r: 1, g: 1, b: 1 });
-  const [sheenEnabled, setSheenEnabled] = useState(false);
-  const [emissiveColor, setEmissiveColor] = useState({ r: 0, g: 0, b: 0 });
-  const [anisotropy, setAnisotropy] = useState(0);
   const [materialName, setMaterialName] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false); // State to manage dialog visibility
   const [loading, setLoading] = useState(false);
@@ -125,92 +145,75 @@ const ControlGUI = ({ addMapNode }) => {
   };
 
   const handleBumpScaleChange = (event, newValue) => {
-    setBumpScale(newValue);
     updateMaterialParams("bumpScale", newValue);
   };
 
   const handleNormalXChange = (event, newValue) => {
-    setNormalX(newValue);
     updateMaterialParams("normalScaleX", newValue);
   };
 
   const handleNormalYChange = (event, newValue) => {
-    setNormalY(newValue);
     updateMaterialParams("normalScaleY", newValue);
   };
 
   const handleScaleXChange = (event, newValue) => {
-    setScaleX(newValue);
     updateMaterialParams("scaleX", newValue);
   };
 
   const handleScaleYChange = (event, newValue) => {
-    setScaleY(newValue);
     updateMaterialParams("scaleY", newValue);
   };
 
   const handleDisplacementScaleChange = (event, newValue) => {
-    setDisplacementScale(newValue);
     updateMaterialParams("displacementScale", newValue);
   };
 
   const handleDisplacementBiasChange = (event, newValue) => {
-    setDisplacementBias(newValue);
     updateMaterialParams("displacementBias", newValue);
   };
 
   const handleMetalnessChange = (event, newValue) => {
-    setMetalness(newValue);
     updateMaterialParams("metalness", newValue);
   };
 
   const handleRoughnessChange = (event, newValue) => {
-    setRoughness(newValue);
     updateMaterialParams("roughness", newValue);
   };
 
   const handleEmissiveChange = (event, newValue) => {
-    setEmissive(newValue);
     updateMaterialParams("emissiveIntensity", newValue);
   };
 
   const handleEnvIntensityChange = (event, newValue) => {
-    setEnvIntensity(newValue);
     updateMaterialParams("envMapIntensity", newValue);
   };
 
   const handleClearcoatChange = (event, newValue) => {
-    setClearcoat(newValue);
     updateMaterialParams("clearcoat", newValue);
   };
 
   const handleOpacityChange = (event, newValue) => {
-    setOpacity(newValue);
     updateMaterialParams("opacity", newValue);
   };
 
   const handleAoChange = (event, newValue) => {
-    setAo(newValue);
     updateMaterialParams("aoMapIntensity", newValue);
   };
 
   const handleSheenIntensityChange = (event, newValue) => {
-    setSheenIntensity(newValue);
     updateMaterialParams("sheen", newValue);
   };
 
   const handleSheenRoughnessChange = (event, newValue) => {
-    setSheenRoughness(newValue);
     updateMaterialParams("sheenRoughness", newValue);
   };
 
   const handleSheenColorChange = (color) => {
-    setSheenColor(color.hex); // Set the color as HEX
-    updateMaterialParams("sheenColor", color.hex); // Pass the HEX value to the context
+    setSheenColor(color.hex);
+    updateMaterialParams("sheenColor", color.hex);
   };
   const handleEmissiveColorChange = (color) => {
-    setEmissiveColor(color.hex); // Set the color as HEX
-    updateMaterialParams("emissiveColor", color.hex); // Pass the HEX value to the context
+    updateMaterialParams("emissiveColor", color.hex);
   };
 
   const handleSheenToggle = (event) => {
@@ -218,7 +221,6 @@ const ControlGUI = ({ addMapNode }) => {
     updateMaterialParams("sheenEnabled", event.target.checked);
   };
   const handleAnisotropyChange = (event, newValue) => {
-    setAnisotropy(newValue);
     updateMaterialParams("anisotropy", newValue);
   };
   const router = useRouter();
@@ -242,7 +244,7 @@ const ControlGUI = ({ addMapNode }) => {
     try {
       const response = await axios.get(apiEndpoint);
       if (response.data.status === "success") {
-        setListData(response.data.projects || []); // Assuming the data is in `projects` field
+        setListData(response.data.projects || []);
       } else {
         setSnackbarMessage("Failed to load data.");
       }
@@ -506,7 +508,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={bumpScale}
+                            value={materialParams.bumpScale || 0.0}
                             onChange={handleBumpScaleChange}
                             label="Bump Scale"
                             min={0}
@@ -527,7 +529,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={scaleX}
+                              value={materialParams.scaleX || 1}
                               onChange={handleScaleXChange}
                               label="Scale X"
                             />
@@ -543,7 +545,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={scaleY}
+                              value={materialParams.scaleY || 1}
                               onChange={handleScaleYChange}
                               label="Scale Y"
                             />
@@ -597,7 +599,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={displacementScale}
+                              value={materialParams.displacementScale || 1}
                               onChange={handleDisplacementScaleChange}
                               label="Displacement Scale"
                             />
@@ -613,7 +615,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={displacementBias}
+                              value={materialParams.displacementBias || 0}
                               onChange={handleDisplacementBiasChange}
                               label="Displacement Bias"
                             />
@@ -631,7 +633,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={metalness}
+                            value={materialParams.metalness || 0.0}
                             onChange={handleMetalnessChange}
                             label="Metalness"
                           />
@@ -648,7 +650,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={roughness}
+                            value={materialParams.roughness || 0.0}
                             onChange={handleRoughnessChange}
                             label="Roughness"
                           />
@@ -666,7 +668,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={emissive}
+                              value={materialParams.emissive || 0}
                               onChange={handleEmissiveChange}
                               label="Emissive"
                             />
@@ -682,7 +684,7 @@ const ControlGUI = ({ addMapNode }) => {
                           >
                             <Typography>Emissive Color</Typography>
                             <ChromePicker
-                              color={emissiveColor}
+                              color={materialParams.emissiveColor || "#000000"}
                               onChange={(color) =>
                                 handleEmissiveColorChange(color)
                               }
@@ -701,7 +703,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={envIntensity}
+                            value={materialParams.envMapIntensity || 0}
                             onChange={handleEnvIntensityChange}
                             label="Environment Intensity"
                           />
@@ -718,7 +720,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={clearcoat}
+                            value={materialParams.clearcoat || 0}
                             onChange={handleClearcoatChange}
                             label="clearcoat"
                           />
@@ -736,7 +738,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={opacity}
+                            value={materialParams.opacity || 1}
                             onChange={handleOpacityChange}
                             label="Opacity"
                           />
@@ -753,7 +755,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={ao}
+                            value={materialParams.ao || 1}
                             onChange={handleAoChange}
                             label="Ambient Occlusion Intensity"
                           />
@@ -770,7 +772,7 @@ const ControlGUI = ({ addMapNode }) => {
                           }}
                         >
                           <CustomSlider
-                            value={anisotropy}
+                            value={materialParams.anisotropy || 0}
                             onChange={handleAnisotropyChange}
                             label="Anisotropy"
                             min={0}
@@ -802,7 +804,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={sheen}
+                              value={materialParams.sheen || 0}
                               onChange={handleSheenIntensityChange}
                               label="Sheen Intensity"
                             />
@@ -817,7 +819,7 @@ const ControlGUI = ({ addMapNode }) => {
                             }}
                           >
                             <CustomSlider
-                              value={sheenRoughness}
+                              value={materialParams.sheenRoughness || 1}
                               onChange={handleSheenRoughnessChange}
                               label="Sheen Roughness"
                             />
@@ -833,7 +835,7 @@ const ControlGUI = ({ addMapNode }) => {
                           >
                             <Typography>Sheen Color</Typography>
                             <ChromePicker
-                              color={sheenColor}
+                              color={materialParams.sheenColor || "#ffffff"}
                               onChange={(color) =>
                                 handleSheenColorChange(color)
                               }
