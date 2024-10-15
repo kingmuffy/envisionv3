@@ -1,5 +1,5 @@
 import React from "react";
-import FabricPage from "./FabricPage";
+import FabricPage from "./Fabricpage";
 
 const page = () => {
   return (
