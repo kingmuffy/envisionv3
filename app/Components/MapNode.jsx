@@ -20,10 +20,8 @@ const MapNode = ({ id, data }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const thumbnail = reader.result;
-        // Update node data (this will update the UI)
         data.updateNodeData(id, file, thumbnail, file.name);
 
-        // Update connected maps in the context
         if (data.mapType) {
           updateConnectedMaps(data.mapType, file);
         }

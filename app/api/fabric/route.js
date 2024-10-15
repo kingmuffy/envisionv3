@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
-import { v4 as uuidv4 } from "uuid"; // Import UUID for unique file names
+import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 

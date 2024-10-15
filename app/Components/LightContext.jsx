@@ -1,60 +1,105 @@
 "use client";
-import React, { createContext, useState } from "react";
+import React, { createContext, useState, useEffect } from "react";
+import axios from "axios";
+import { Snackbar, Alert } from "@mui/material";
 
 export const LightContext = createContext();
 
 export const LightProvider = ({ children }) => {
   const maxLightsPerType = 5;
+  const [lights, setLights] = useState([]);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const [lights, setLights] = useState([
-    { id: 1, type: "AMBIENT", name: "Ambient Light", intensity: 0.5 },
-    {
-      id: 2,
+  const lightPresets = {
+    AMBIENT: (apiLight) => ({
+      id: apiLight.id,
+      type: "AMBIENT",
+      name: apiLight.name || "Ambient Light",
+      intensity: apiLight.intensity || 0.5,
+    }),
+    DIRECTIONAL: (apiLight) => ({
+      id: apiLight.id,
       type: "DIRECTIONAL",
-      name: "Directional Light",
-      intensity: 0.8,
-      position: { x: 0, y: 5, z: 5 },
-      // castShadow: true,
-      bias: -0.005,
-    },
-    {
-      id: 3,
+      name: apiLight.name || "Directional Light",
+      intensity: apiLight.intensity || 1,
+      position: apiLight.position
+        ? JSON.parse(apiLight.position)
+        : { x: 0, y: 5, z: 0 },
+      bias: apiLight.bias || -0.005,
+    }),
+    HEMISPHERE: (apiLight) => ({
+      id: apiLight.id,
       type: "HEMISPHERE",
-      name: "Hemisphere Light",
-      intensity: 0.6,
-      color: "#ffffff",
-      groundColor: "#0000ff",
-    },
-    {
-      id: 4,
+      name: apiLight.name || "Hemisphere Light",
+      intensity: apiLight.intensity || 0.6,
+      color: apiLight.color || "#ffffff",
+      groundColor: apiLight.groundColor || "#0000ff",
+    }),
+    SPOT: (apiLight) => ({
+      id: apiLight.id,
       type: "SPOT",
-      name: "Spot Light 1",
-      intensity: 0.7,
-      position: { x: 2, y: 5, z: 2 },
-      angle: 0.3,
-      decay: 2,
-      castShadow: true,
-    },
-    {
-      id: 5,
-      type: "SPOT",
-      name: "Spot Light 2",
-      intensity: 0.7,
-      position: { x: -2, y: 5, z: -2 },
-      angle: 0.3,
-      decay: 2,
-      castShadow: true,
-    },
-  ]);
+      name: apiLight.name || "Spot Light",
+      intensity: apiLight.intensity || 0.7,
+      position: apiLight.position
+        ? JSON.parse(apiLight.position)
+        : { x: 2, y: 5, z: 2 },
+      angle: apiLight.angle || 0.3,
+      decay: apiLight.decay || 2,
+      castShadow:
+        apiLight.castShadow !== undefined ? apiLight.castShadow : true, // Use API value or default to true
+    }),
+  };
+
+  useEffect(() => {
+    const fetchLightsFromAPI = async () => {
+      try {
+        const response = await axios.get("/api/getdefault");
+        const apiProject = response.data;
+        if (!apiProject || !apiProject.lightSettings) {
+          console.error("No light settings found in the response.");
+          return;
+        }
+
+        const apiLights = apiProject.lightSettings;
+
+        const mappedLights = apiLights.map((apiLight, index) => {
+          const lightType = apiLight.lightType.toUpperCase();
+
+          if (lightPresets[lightType]) {
+            return lightPresets[lightType]({
+              ...apiLight,
+              id: index + 1,
+            });
+          }
+
+          console.error(`Light type ${lightType} is not supported.`);
+          return null;
+        });
+
+        setLights(mappedLights.filter((light) => light !== null));
+
+        setSnackbarOpen(true);
+      } catch (error) {
+        console.error("Failed to fetch lights from API:", error);
+      }
+    };
+
+    fetchLightsFromAPI();
+  }, []);
 
   const updateLight = (id, newSettings) => {
     setLights((prevLights) =>
       prevLights.map((light) =>
-        light.id === id ? { ...light, ...newSettings } : light
+        light.id === id
+          ? {
+              ...light,
+              ...newSettings,
+              name: newSettings.name || light.name,
+            }
+          : light
       )
     );
   };
-
   const deleteLight = (id) => {
     setLights((prevLights) => prevLights.filter((light) => light.id !== id));
   };
@@ -70,43 +115,17 @@ export const LightProvider = ({ children }) => {
       return;
     }
 
-    const lightSettings = {
-      AMBIENT: { intensity: 0.5 },
-      DIRECTIONAL: {
-        intensity: 1,
-        position: { x: 0, y: 5, z: 0 },
-        castShadow: false,
-        bias: -0.005,
-      },
-      HEMISPHERE: {
-        intensity: 0.6,
-        color: "#ffffff",
-        groundColor: "#0000ff",
-      },
-      SPOT: {
-        intensity: 0.7,
-        position: { x: 2, y: 5, z: 2 },
-        angle: 0.3,
-        decay: 2,
-        castShadow: true,
-      },
-    };
-
     const lightType = newLight.type.toUpperCase();
 
-    if (!lightSettings[lightType]) {
+    if (lightPresets[lightType]) {
+      const newLightWithSettings = {
+        id: newLightId,
+        ...lightPresets[lightType](newLight),
+      };
+      setLights((prevLights) => [...prevLights, newLightWithSettings]);
+    } else {
       console.error("Invalid light type:", lightType);
-      return;
     }
-
-    const newLightWithSettings = {
-      id: newLightId,
-      type: lightType,
-      name: newLight.name,
-      ...lightSettings[lightType],
-    };
-
-    setLights((prevLights) => [...prevLights, newLightWithSettings]);
   };
 
   const renameLight = (id, newName) => {
@@ -138,6 +157,34 @@ export const LightProvider = ({ children }) => {
     };
     setLights((prevLights) => [...prevLights, newLight]);
   };
+  const handleSaveLights = async (projectName) => {
+    try {
+      const formattedLights = lights.map((light) => ({
+        ...light,
+        targetPosition: light.target ? light.target : null,
+      }));
+
+      console.log("Project Name:", projectName);
+      console.log("Formatted Lights Data Sent:", formattedLights);
+
+      const response = await axios.post("/api/lights", {
+        projectName,
+        lightSettings: formattedLights,
+      });
+
+      if (response.data.status === "success") {
+        console.log("Project and lights saved successfully!");
+      } else {
+        console.error("Failed to save project and lights.");
+      }
+    } catch (error) {
+      console.error("Error saving project and lights:", error);
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
+  };
 
   return (
     <LightContext.Provider
@@ -148,9 +195,24 @@ export const LightProvider = ({ children }) => {
         addLight,
         renameLight,
         duplicateLight,
+        handleSaveLights,
       }}
     >
       {children}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Default light settings loaded successfully!
+        </Alert>
+      </Snackbar>
     </LightContext.Provider>
   );
 };

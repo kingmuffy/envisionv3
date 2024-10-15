@@ -35,22 +35,30 @@ import CustomSlider from "./Styles/CustomSlider.jsx";
 import CameraSettings from "./Settings/CameraSettings";
 import ColorPicker from "./Styles/ColorPicker.jsx";
 import LightSettings from "./Settings/LightSettings.jsx";
-import { MapContext } from "../MapContext";
+import { LightContext } from "../Components/LightContext.jsx";
+
+import { MapContext } from "../MapContext.jsx";
 import { Switch, FormControlLabel } from "@mui/material";
-import { useRouter } from "next/navigation";
-import { ChromePicker } from "react-color"; // Import the ChromePicker
+import { ChromePicker } from "react-color";
 import axios from "axios";
-const ControlGUI = ({ addMapNode }) => {
+import MaterialList from "./Dialog/MaterialList.jsx";
+import LightList from "./Dialog/LightList.jsx";
+import CameraList from "./Dialog/CameraList.jsx";
+
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { useRouter } from "next/navigation";
+
+const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const { connectedMaps, materialParams, updateConnectedMaps } =
     useContext(MapContext);
-
   const [open, setOpen] = useState(true);
   const [selectedIcon, setSelectedIcon] = useState("materials");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const { lights, handleSaveLights } = useContext(LightContext);
 
   const { updateMaterialParams } = useContext(MapContext);
-
+  //maps state
   const [bumpScale, setBumpScale] = useState(0.0);
   const [normalX, setNormalX] = useState(1);
   const [normalY, setNormalY] = useState(1);
@@ -63,62 +71,145 @@ const ControlGUI = ({ addMapNode }) => {
   const [emissive, setEmissive] = useState(0);
   const [envIntensity, setEnvIntensity] = useState(0);
   const [clearcoat, setClearcoat] = useState(0);
+  // const [specular, setSpecular] = useState(1);
   const [opacity, setOpacity] = useState(1);
   const [ao, setAo] = useState(1);
   const [sheen, setSheenIntensity] = useState(0);
+  // const [sheenIntensity, setSheenIntensity] = useState(0);
   const [sheenRoughness, setSheenRoughness] = useState(1);
   const [sheenColor, setSheenColor] = useState({ r: 1, g: 1, b: 1 });
   const [sheenEnabled, setSheenEnabled] = useState(false);
   const [emissiveColor, setEmissiveColor] = useState({ r: 0, g: 0, b: 0 });
   const [anisotropy, setAnisotropy] = useState(0);
-  const [materialName, setMaterialName] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // State to manage dialog visibility
   const [loading, setLoading] = useState(false);
+  const [materialName, setMaterialName] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [listData, setListData] = useState([]);
+  const [lightSceneName, setLightSceneName] = useState("");
+  const [expandedPanel, setExpandedPanel] = useState(null);
+
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpandedPanel(isExpanded ? panel : null);
+  };
 
   const handleToggle = () => {
     setOpen(!open);
   };
+  const handleSaveCamera = () => {
+    const activeCamera =
+      cameras.length > 0 ? cameras[cameras.length - 1] : null;
 
+    if (!activeCamera) {
+      setSnackbarMessage("No camera data available to save.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    saveCameraSettings(activeCamera)
+      .then(() => {
+        setSnackbarMessage("Camera settings saved successfully!");
+        setSnackbarOpen(true);
+      })
+      .catch((error) => {
+        console.error("Error saving camera:", error);
+        setSnackbarMessage("Failed to save camera settings.");
+        setSnackbarOpen(true);
+      });
+  };
   const handleMaterialNameChange = (event) => {
     setMaterialName(event.target.value);
   };
-
   const handleIconSelect = (iconName) => {
     setSelectedIcon(iconName);
+    setShowReactFlow(iconName === "materials");
+  };
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete("/api/delete", { data: { id } });
+
+      setListData((prevData) => prevData.filter((item) => item.id !== id));
+
+      setSnackbarMessage(
+        "Project and related light scenes deleted successfully."
+      );
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      setSnackbarMessage("Failed to delete project and related light scenes.");
+    }
+    setSnackbarOpen(true);
+  };
+
+  const handleMakeDefault = async (id) => {
+    try {
+      await axios.post("/api/default", { id });
+
+      setSnackbarMessage("Light scene set as default.");
+      setListData((prevData) =>
+        prevData.map((item) => ({
+          ...item,
+          isDefault: item.id === id,
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      setSnackbarMessage("Failed to set default.");
+    }
+    setSnackbarOpen(true);
   };
 
   const handleSave = async () => {
-    if (selectedIcon === "materials" && !materialName.trim()) {
-      setSnackbarMessage("No material name entered, cannot save.");
+    if (
+      (selectedIcon === "materials" && !materialName.trim()) ||
+      (selectedIcon === "sun" && !lightSceneName.trim())
+    ) {
+      const message =
+        selectedIcon === "materials"
+          ? "No material name entered, cannot save."
+          : "Please enter a name for the light scene.";
+
+      setSnackbarMessage(message);
       setSnackbarOpen(true);
       return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append("materialName", materialName);
+      if (selectedIcon === "materials") {
+        const formData = new FormData();
+        formData.append("materialName", materialName);
 
-      for (const [paramName, value] of Object.entries(materialParams)) {
-        formData.append(paramName, value);
-      }
-      for (const [mapType, file] of Object.entries(connectedMaps)) {
-        if (file) {
-          const formKey = `${mapType.toLowerCase()}MapUrl`;
-          formData.append(formKey, file);
+        for (const [paramName, value] of Object.entries(materialParams)) {
+          formData.append(paramName, value);
+        }
+
+        for (const [mapType, file] of Object.entries(connectedMaps)) {
+          if (file) {
+            const formKey = `${mapType.toLowerCase()}MapUrl`;
+            formData.append(formKey, file);
+          }
+        }
+
+        const response = await axios.post("/api/fabric", formData);
+
+        if (response.data.status === "success") {
+          setSnackbarMessage("Fabric data saved successfully!");
+        } else {
+          setSnackbarMessage("Failed to save fabric data.");
+        }
+      } else if (selectedIcon === "sun") {
+        await handleSaveLights(lightSceneName);
+        setSnackbarMessage("Light settings saved successfully!");
+      } else if (selectedIcon === "camera") {
+        const response = await axios.post("/api/cameras", {});
+
+        if (response.data.status === "success") {
+          setSnackbarMessage("Camera settings saved successfully!");
+        } else {
+          setSnackbarMessage("Failed to save camera settings.");
         }
       }
-
-      const response = await axios.post("/api/fabric", formData);
-
-      if (response.data.status === "success") {
-        setSnackbarMessage("Fabric data saved successfully!");
-      } else {
-        setSnackbarMessage("Failed to save fabric data.");
-      }
     } catch (error) {
-      console.error("Error saving fabric data:", error);
-      setSnackbarMessage("Error saving fabric data.");
+      console.error("Error saving data:", error);
+      setSnackbarMessage("Error saving data.");
     } finally {
       setSnackbarOpen(true);
     }
@@ -173,7 +264,6 @@ const ControlGUI = ({ addMapNode }) => {
     setEmissive(newValue);
     updateMaterialParams("emissiveIntensity", newValue);
   };
-
   const handleEnvIntensityChange = (event, newValue) => {
     setEnvIntensity(newValue);
     updateMaterialParams("envMapIntensity", newValue);
@@ -183,17 +273,14 @@ const ControlGUI = ({ addMapNode }) => {
     setClearcoat(newValue);
     updateMaterialParams("clearcoat", newValue);
   };
-
   const handleOpacityChange = (event, newValue) => {
     setOpacity(newValue);
     updateMaterialParams("opacity", newValue);
   };
-
   const handleAoChange = (event, newValue) => {
     setAo(newValue);
     updateMaterialParams("aoMapIntensity", newValue);
   };
-
   const handleSheenIntensityChange = (event, newValue) => {
     setSheenIntensity(newValue);
     updateMaterialParams("sheen", newValue);
@@ -205,12 +292,12 @@ const ControlGUI = ({ addMapNode }) => {
   };
 
   const handleSheenColorChange = (color) => {
-    setSheenColor(color.hex); // Set the color as HEX
-    updateMaterialParams("sheenColor", color.hex); // Pass the HEX value to the context
+    setSheenColor(color.hex);
+    updateMaterialParams("sheenColor", color.hex);
   };
   const handleEmissiveColorChange = (color) => {
-    setEmissiveColor(color.hex); // Set the color as HEX
-    updateMaterialParams("emissiveColor", color.hex); // Pass the HEX value to the context
+    setEmissiveColor(color.hex);
+    updateMaterialParams("emissiveColor", color.hex);
   };
 
   const handleSheenToggle = (event) => {
@@ -242,7 +329,7 @@ const ControlGUI = ({ addMapNode }) => {
     try {
       const response = await axios.get(apiEndpoint);
       if (response.data.status === "success") {
-        setListData(response.data.projects || []); // Assuming the data is in `projects` field
+        setListData(response.data.projects || []);
       } else {
         setSnackbarMessage("Failed to load data.");
       }
@@ -267,6 +354,7 @@ const ControlGUI = ({ addMapNode }) => {
         margin: "10px auto",
         backgroundColor: "white",
         display: "flex",
+
         flexDirection: "column",
         justifyContent: "space-between",
       }}
@@ -275,13 +363,17 @@ const ControlGUI = ({ addMapNode }) => {
         onClick={handleToggle}
         sx={{
           position: "fixed",
-          right: open ? "280px" : "0px",
+          right: open ? "300px" : "0px",
           top: "10px",
           zIndex: 1300,
           padding: "4px",
           color: "black",
           backgroundColor: "transparent",
           border: "none",
+          outline: "none",
+          "&:focus": {
+            outline: "none",
+          },
         }}
       >
         <MenuOpenIcon fontSize="small" />
@@ -290,11 +382,11 @@ const ControlGUI = ({ addMapNode }) => {
       <Box
         sx={{
           position: "fixed",
-          right: open ? 0 : "-280px",
+          right: open ? 0 : "-300px",
           top: 0,
-          width: "280px",
+          width: "300px",
           height: "97vh",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "white",
           boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 12px",
           transition: "right 0.3s ease",
           zIndex: 1200,
@@ -305,101 +397,135 @@ const ControlGUI = ({ addMapNode }) => {
       >
         <AppBar
           position="static"
-          sx={{ backgroundColor: "black", padding: "5px", height: "65px" }}
+          sx={{
+            backgroundColor: "#393A3D",
+            padding: "5px",
+            width: "300px",
+            marginLeft: "auto",
+            marginRight: "auto",
+            borderRadius: "0px 0px 4px 4px",
+          }}
         >
           <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography variant="h6" component="div" sx={{ fontSize: "12px" }}>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontSize: "20px", fontFamily: "Avenir, sans-serif" }}
+            >
               {selectedIcon === "sun"
-                ? "Light Scene Name"
+                ? "Light"
                 : selectedIcon === "camera"
-                ? "Camera Setting Name"
+                ? "Camera "
                 : "Materials"}
             </Typography>
-            <Box sx={{ display: "flex", gap: "5px" }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: "8px",
+              }}
+            >
               <IconButton
                 sx={{
                   color: selectedIcon === "materials" ? "white" : "white",
-                  padding: "6px",
+                  padding: "9px",
                   borderRadius: "50%",
+
                   backgroundColor:
-                    selectedIcon === "materials" ? "green" : "transparent",
+                    selectedIcon === "materials" ? "#529D36" : "transparent",
                   border:
-                    selectedIcon === "materials" ? "0.5px solid white" : "none",
+                    selectedIcon === "materials" ? "none" : "1px solid #6B6C71",
                   "&:hover": {
                     backgroundColor:
                       selectedIcon === "materials"
                         ? "darkgreen"
                         : "rgba(255, 255, 255, 0.1)",
+                    outline: "#393A3D",
+                    border: "#393A3D",
                   },
                   "&:focus": {
-                    outline: "none",
+                    outline: "#393A3D",
+                    border: "#393A3D",
+                    boxShadow: "none",
                   },
                   "&:focus-visible": {
-                    outline: "none",
+                    outline: "#393A3D",
+                    border: "#393A3D",
+                    boxShadow: "none",
                   },
                 }}
                 onClick={() => handleIconSelect("materials")}
               >
-                <BackupTableIcon fontSize="small" />
+                <BackupTableIcon sx={{ fontSize: "20px" }} />
               </IconButton>
 
-              {/* Sun Icon */}
               <IconButton
                 sx={{
                   color: selectedIcon === "sun" ? "white" : "white",
-                  padding: "6px",
+                  padding: "9px",
                   borderRadius: "50%",
                   backgroundColor:
-                    selectedIcon === "sun" ? "green" : "transparent",
-                  border: selectedIcon === "sun" ? "0.5px solid white" : "none",
+                    selectedIcon === "sun" ? "#529D36" : "transparent",
+                  border: selectedIcon === "sun" ? "none" : "1px solid #6B6C71",
                   "&:hover": {
                     backgroundColor:
                       selectedIcon === "sun"
                         ? "darkgreen"
                         : "rgba(255, 255, 255, 0.1)",
+                    outline: "none",
+                    border: "none",
                   },
                   "&:focus": {
                     outline: "none",
+                    border: "none",
+                    boxShadow: "none",
                   },
                   "&:focus-visible": {
                     outline: "none",
+                    border: "none",
+                    boxShadow: "none",
                   },
                 }}
                 onClick={() => handleIconSelect("sun")}
               >
-                <WbSunnyIcon />
+                <WbSunnyIcon sx={{ fontSize: "20px" }} />
               </IconButton>
 
-              {/* Camera Icon */}
               <IconButton
                 sx={{
                   color: selectedIcon === "camera" ? "white" : "white",
-                  padding: "6px",
-                  borderRadius: "50%",
+                  padding: "8px",
+                  borderRadius: "100%",
                   backgroundColor:
-                    selectedIcon === "camera" ? "green" : "transparent",
+                    selectedIcon === "camera" ? "#529D36" : "transparent",
                   border:
-                    selectedIcon === "camera" ? "0.5px solid white" : "none",
+                    selectedIcon === "camera" ? "none" : "1px solid #6B6C71",
                   "&:hover": {
                     backgroundColor:
                       selectedIcon === "camera"
                         ? "darkgreen"
                         : "rgba(255, 255, 255, 0.1)",
+                    outline: "none",
+                    border: "none",
                   },
                   "&:focus": {
                     outline: "none",
+                    border: "none",
+                    boxShadow: "none",
                   },
                   "&:focus-visible": {
                     outline: "none",
+                    border: "none",
+                    boxShadow: "none",
                   },
                 }}
                 onClick={() => handleIconSelect("camera")}
               >
-                <VideocamIcon />
+                <VideocamIcon sx={{ fontSize: "20px" }} />
               </IconButton>
             </Box>
           </Toolbar>
         </AppBar>
+
         <Box
           sx={{
             flexGrow: 1,
@@ -421,26 +547,154 @@ const ControlGUI = ({ addMapNode }) => {
               }
               variant="outlined"
               className="custom-text-field"
-              value={selectedIcon === "materials" ? materialName : ""}
+              value={
+                selectedIcon === "materials"
+                  ? materialName
+                  : selectedIcon === "sun"
+                  ? lightSceneName
+                  : ""
+              }
               onChange={
                 selectedIcon === "materials"
                   ? handleMaterialNameChange
+                  : selectedIcon === "sun"
+                  ? (e) => setLightSceneName(e.target.value)
                   : undefined
               }
               InputLabelProps={{
-                shrink: true,
+                shrink:
+                  selectedIcon === "materials"
+                    ? Boolean(materialName)
+                    : selectedIcon === "sun"
+                    ? Boolean(lightSceneName)
+                    : false,
                 style: {
-                  transform: "translate(14px, -6px) scale(0.75)",
+                  position: "absolute",
+                  top: (
+                    selectedIcon === "materials" ? materialName : lightSceneName
+                  )
+                    ? "-5px"
+                    : "50%",
+                  left: "10px",
+                  transform: "translateY(-50%)",
                   backgroundColor: "white",
                   padding: "0 4px",
+                  color: "#C0C3C8",
+                  fontSize: "11px",
                 },
               }}
             />
           </Box>
+          <Box
+            sx={{
+              flexGrow: 0,
+              paddingBottom: "20px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              overflowY: "auto",
+              borderBottom: "1px solid #DDDDDD",
+            }}
+          >
+            {selectedIcon === "materials" && (
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "Bold",
+                  fontSize: "12px",
+                  paddingLeft: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                  color: "#282828",
+                  letterSpacing: "1.5px",
+                  fontFamily: "Avenir, sans-serif",
+                }}
+              >
+                CONTROLS
+              </Typography>
+            )}
+
+            {selectedIcon === "camera" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingLeft: "14px",
+                  paddingRight: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  CAMERAS IN SCENE
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  ACTION
+                </Typography>
+              </Box>
+            )}
+
+            {selectedIcon === "sun" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingLeft: "14px",
+                  paddingRight: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  LIGHTS IN SCENE
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  ACTION
+                </Typography>
+              </Box>
+            )}
+          </Box>
 
           {selectedIcon === "materials" ? (
             <Box sx={{ maxHeight: "80vh", overflowY: "auto" }}>
-              {/* Accordion Section for materials */}
               {[
                 "DIFFUSE",
                 "ENVIRONMENT",
@@ -461,6 +715,8 @@ const ControlGUI = ({ addMapNode }) => {
                   <Accordion
                     disableGutters
                     elevation={0}
+                    expanded={expandedPanel === control}
+                    onChange={handleAccordionChange(control)}
                     sx={{
                       border: "none",
                       padding: "0px",
@@ -474,18 +730,41 @@ const ControlGUI = ({ addMapNode }) => {
                     }}
                   >
                     <AccordionSummary
-                      expandIcon={<ExpandMoreIcon sx={{ fontSize: "12px" }} />}
                       sx={{ minHeight: "20px", padding: "0px", margin: 0 }}
                     >
-                      <Typography
+                      <Box
                         sx={{
-                          fontSize: "8px",
-                          fontWeight: "normal",
-                          margin: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
                         }}
                       >
-                        {control}
-                      </Typography>
+                        {expandedPanel === control ? (
+                          <ExpandMoreIcon sx={{ fontSize: "21px" }} />
+                        ) : (
+                          <ChevronRightIcon sx={{ fontSize: "21px" }} />
+                        )}
+
+                        <Typography
+                          sx={{
+                            width: "117px",
+                            position: "relative",
+                            fontSize: "10px",
+                            letterSpacing: "0.02em",
+                            lineHeight: "35px",
+                            textTransform: "uppercase",
+                            fontWeight: 800,
+                            fontFamily: "Avenir, sans-serif",
+                            color: "#282828",
+                            textAlign: "left",
+                            display: "inline-block",
+                            height: "36px",
+                            margin: 0,
+                          }}
+                        >
+                          {control}
+                        </Typography>
+                      </Box>
                     </AccordionSummary>
                     <AccordionDetails
                       sx={{
@@ -508,12 +787,13 @@ const ControlGUI = ({ addMapNode }) => {
                           <CustomSlider
                             value={bumpScale}
                             onChange={handleBumpScaleChange}
-                            label="Bump Scale"
+                            label="bumpScale"
                             min={0}
                             max={10}
                             step={0.1}
                           />
                         </Box>
+                        //break
                       )}
                       {control === "DIFFUSE" && (
                         <>
@@ -529,7 +809,7 @@ const ControlGUI = ({ addMapNode }) => {
                             <CustomSlider
                               value={scaleX}
                               onChange={handleScaleXChange}
-                              label="Scale X"
+                              label="scaleX"
                             />
                           </Box>
 
@@ -545,11 +825,12 @@ const ControlGUI = ({ addMapNode }) => {
                             <CustomSlider
                               value={scaleY}
                               onChange={handleScaleYChange}
-                              label="Scale Y"
+                              label="scaleY"
                             />
                           </Box>
                         </>
                       )}
+
                       {control === "NORMAL" && (
                         <>
                           <Box
@@ -564,7 +845,7 @@ const ControlGUI = ({ addMapNode }) => {
                             <CustomSlider
                               value={materialParams.normalScaleX || 1}
                               onChange={handleNormalXChange}
-                              label="Normal X"
+                              label="NormalX"
                             />
                           </Box>
 
@@ -580,11 +861,12 @@ const ControlGUI = ({ addMapNode }) => {
                             <CustomSlider
                               value={materialParams.normalScaleY || 1}
                               onChange={handleNormalYChange}
-                              label="Normal Y"
+                              label="NormalY"
                             />
                           </Box>
                         </>
                       )}
+
                       {control === "DISPLACEMENT" && (
                         <>
                           <Box
@@ -621,39 +903,45 @@ const ControlGUI = ({ addMapNode }) => {
                         </>
                       )}
                       {control === "METALNESS" && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <CustomSlider
-                            value={metalness}
-                            onChange={handleMetalnessChange}
-                            label="Metalness"
-                          />
-                        </Box>
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={metalness}
+                              onChange={handleMetalnessChange}
+                              label="Metalness"
+                            />
+                          </Box>
+                        </>
                       )}
+
                       {control === "ROUGHNESS" && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <CustomSlider
-                            value={roughness}
-                            onChange={handleRoughnessChange}
-                            label="Roughness"
-                          />
-                        </Box>
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={roughness}
+                              onChange={handleRoughnessChange}
+                              label="Roughness"
+                            />
+                          </Box>
+                        </>
                       )}
+
                       {control === "EMISSIVE" && (
                         <>
                           <Box
@@ -680,33 +968,68 @@ const ControlGUI = ({ addMapNode }) => {
                               marginBottom: "10px",
                             }}
                           >
-                            <Typography>Emissive Color</Typography>
-                            <ChromePicker
-                              color={emissiveColor}
-                              onChange={(color) =>
-                                handleEmissiveColorChange(color)
-                              }
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                fontWeight: "normal",
+                                color: "#333",
+                                marginRight: "15px",
+                                marginLeft: "10px",
+                              }}
+                            >
+                              Emissive Color
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "5px",
+                                width: "150px",
+                              }}
+                            >
+                              <ChromePicker
+                                disableAlpha
+                                color={emissiveColor}
+                                onChange={(color) =>
+                                  handleEmissiveColorChange(color)
+                                }
+                                styles={{
+                                  default: {
+                                    picker: {
+                                      width: "140px",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                                      border: "1px solid #ccc",
+                                      borderRadius: "6px",
+                                    },
+                                  },
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </>
+                      )}
+
+                      {control === "ENVIRONMENT" && (
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={envIntensity}
+                              onChange={handleEnvIntensityChange}
+                              label="E.Intensity"
                             />
                           </Box>
                         </>
                       )}
-                      {control === "ENVIRONMENT" && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <CustomSlider
-                            value={envIntensity}
-                            onChange={handleEnvIntensityChange}
-                            label="Environment Intensity"
-                          />
-                        </Box>
-                      )}
+
                       {control === "CLEARCOAT" && (
                         <Box
                           sx={{
@@ -724,41 +1047,45 @@ const ControlGUI = ({ addMapNode }) => {
                           />
                         </Box>
                       )}
-
                       {control === "OPACITY" && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <CustomSlider
-                            value={opacity}
-                            onChange={handleOpacityChange}
-                            label="Opacity"
-                          />
-                        </Box>
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={opacity}
+                              onChange={handleOpacityChange}
+                              label="opacity"
+                            />
+                          </Box>
+                        </>
                       )}
                       {control === "AO" && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          <CustomSlider
-                            value={ao}
-                            onChange={handleAoChange}
-                            label="Ambient Occlusion Intensity"
-                          />
-                        </Box>
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={ao}
+                              onChange={handleAoChange}
+                              label="AO.Intensity"
+                            />
+                          </Box>
+                        </>
                       )}
+
                       {control === "ANISOTROPY" && (
                         <Box
                           sx={{
@@ -779,19 +1106,49 @@ const ControlGUI = ({ addMapNode }) => {
                           />
                         </Box>
                       )}
+
                       {control === "SHEEN" && (
                         <>
-                          <FormControlLabel
-                            control={
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              marginTop: 0,
+                              marginBottom: 1,
+                              gap: 2,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                textAlign: "center",
+                                color: "#333",
+                                marginRight: "0px",
+                                marginLeft: "20px",
+                                fontFamily: "Avenir, sans-serif",
+                              }}
+                            >
+                              sheenEnabled
                               <Switch
                                 checked={sheenEnabled}
                                 onChange={handleSheenToggle}
-                                color="primary"
+                                size="small"
+                                sx={{
+                                  "& .MuiSwitch-switchBase.Mui-checked": {
+                                    color: "green",
+                                  },
+                                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                                    {
+                                      backgroundColor: "green",
+                                    },
+                                  "& .MuiSwitch-track": {
+                                    backgroundColor: "#ccc",
+                                  },
+                                }}
                               />
-                            }
-                            label="Enable Sheen"
-                            labelPlacement="end"
-                          />
+                            </Typography>
+                          </Box>
+
                           <Box
                             sx={{
                               display: "flex",
@@ -804,7 +1161,7 @@ const ControlGUI = ({ addMapNode }) => {
                             <CustomSlider
                               value={sheen}
                               onChange={handleSheenIntensityChange}
-                              label="Sheen Intensity"
+                              label="Intensity"
                             />
                           </Box>
                           <Box
@@ -813,13 +1170,13 @@ const ControlGUI = ({ addMapNode }) => {
                               justifyContent: "space-between",
                               alignItems: "center",
                               gap: "10px",
-                              marginBottom: "10px",
+                              marginBottom: "5px",
                             }}
                           >
                             <CustomSlider
                               value={sheenRoughness}
                               onChange={handleSheenRoughnessChange}
-                              label="Sheen Roughness"
+                              label="Roughness"
                             />
                           </Box>
                           <Box
@@ -831,13 +1188,45 @@ const ControlGUI = ({ addMapNode }) => {
                               marginBottom: "10px",
                             }}
                           >
-                            <Typography>Sheen Color</Typography>
-                            <ChromePicker
-                              color={sheenColor}
-                              onChange={(color) =>
-                                handleSheenColorChange(color)
-                              }
-                            />
+                            <Typography
+                              sx={{
+                                fontSize: "10px",
+                                fontWeight: "normal",
+                                color: "#333",
+                                marginRight: "25px",
+                                marginLeft: "20px",
+                              }}
+                            >
+                              Sheen Color
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "flex-start",
+                                gap: "5px",
+                                width: "150px",
+                                marginLeft: "0px",
+                              }}
+                            >
+                              <ChromePicker
+                                color={sheenColor}
+                                disableAlpha
+                                onChange={(color) =>
+                                  handleSheenColorChange(color)
+                                }
+                                styles={{
+                                  default: {
+                                    picker: {
+                                      width: "130px",
+                                      boxShadow: "none",
+                                      border: "1px solid #ddd",
+                                      borderRadius: "4px",
+                                    },
+                                  },
+                                }}
+                              />
+                            </Box>
                           </Box>
                         </>
                       )}
@@ -846,7 +1235,7 @@ const ControlGUI = ({ addMapNode }) => {
                   <Divider
                     sx={{
                       borderBottomWidth: "0.5px",
-                      backgroundColor: "#ccc",
+                      backgroundColor: "#ddd",
                       width: "90%",
                       margin: "0 auto",
                     }}
@@ -860,39 +1249,84 @@ const ControlGUI = ({ addMapNode }) => {
             <LightSettings />
           ) : null}
         </Box>
+
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             backgroundColor: "#333",
-            padding: "5px",
+            padding: "0px",
             gap: "10px",
             minHeight: "50px",
+            position: "relative",
           }}
         >
           {selectedIcon === "materials" ? (
-            <Button
-              variant="contained"
-              onClick={() => addMapNode()}
+            <Box
               sx={{
-                backgroundColor: "green",
-                color: "white",
-                borderRadius: "10px",
-                flexGrow: 1,
-                fontSize: "10px",
-                padding: "5px 10px",
-                marginRight: "5px",
-                "&:hover": {
-                  backgroundColor: "darkgreen",
-                },
+                backgroundColor: "white",
+                width: "380px",
+                height: "50px",
+                borderRadius: "3px 0px 0px 0px",
+                padding: 0,
+                margin: 0,
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
+                position: "relative",
+                zIndex: 1,
               }}
             >
-              Add Map
-            </Button>
+              <Button
+                variant="contained"
+                onClick={() => addMapNode()}
+                sx={{
+                  backgroundColor: "#529D36",
+                  color: "white",
+                  width: "190px",
+                  height: "30px",
+                  padding: 0,
+                  minWidth: 0,
+                  borderRadius: "3px 0px 0px 0px",
+                  "&:hover": {
+                    backgroundColor: "darkgreen",
+                  },
+                }}
+              >
+                Add Map
+              </Button>
+            </Box>
+          ) : selectedIcon === "sun" ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: "#529D36",
+                  color: "white",
+                  width: "190px",
+                  height: "30px",
+                  padding: 0,
+                  minWidth: 0,
+                  marginTop: "10px",
+                  textTransform: "none",
+                  borderRadius: "3px 0px 0px 0px",
+                  "&:hover": {
+                    backgroundColor: "darkgreen",
+                  },
+                }}
+                startIcon={<CheckIcon sx={{ fontSize: "12px" }} />}
+              >
+                Save Light Scene
+              </Button>
+            </Box>
           ) : selectedIcon === "sun" ? (
             <Button
               variant="contained"
@@ -914,10 +1348,38 @@ const ControlGUI = ({ addMapNode }) => {
             >
               Save Light Scene
             </Button>
+          ) : selectedIcon === "camera" ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: "#529D36",
+                  color: "white",
+                  width: "190px",
+                  height: "30px",
+                  padding: 0,
+                  minWidth: 0,
+                  marginTop: "10px",
+                  textTransform: "none",
+                  borderRadius: "3px 0px 0px 0px",
+                  "&:hover": {
+                    backgroundColor: "darkgreen",
+                  },
+                }}
+                startIcon={<CheckIcon sx={{ fontSize: "12px" }} />}
+              >
+                Save Camera
+              </Button>
+            </Box>
           ) : null}
         </Box>
-        {/* Dialog for loading the module */}
-        {/* Dialog for loading the module */}
         <Dialog open={isDialogOpen} onClose={handleDialogClose}>
           <DialogContent sx={{ minWidth: "500px", padding: "20px" }}>
             <Typography
@@ -941,73 +1403,28 @@ const ControlGUI = ({ addMapNode }) => {
                 <CircularProgress />
               </Box>
             ) : (
-              <List>
-                {listData.map((item) => (
-                  <ListItem
-                    key={item.id}
-                    sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "15px",
-                      borderBottom: "1px solid lightgray",
-                      paddingBottom: "10px",
-                      marginBottom: "10px",
-                      cursor: "pointer",
-                      "&:hover": {
-                        backgroundColor: "#f0f0f0",
-                      },
-                    }}
-                    onClick={() => handleEditRedirect(item.id)}
-                  >
-                    {item.diffuseMapUrl ? (
-                      <img
-                        src={item.diffuseMapUrl}
-                        alt={item.materialName || "Material Image"}
-                        style={{
-                          width: "70px",
-                          height: "70px",
-                          borderRadius: "5px",
-                          objectFit: "cover",
-                          backgroundColor: "#f5f5f5",
-                        }}
-                      />
-                    ) : (
-                      <Avatar
-                        variant="square"
-                        sx={{
-                          width: 70,
-                          height: 70,
-                          borderRadius: "5px",
-                          backgroundColor: "grey.300",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          color: "white",
-                          fontSize: 14,
-                        }}
-                      >
-                        No Image
-                      </Avatar>
-                    )}
-
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ color: "black", fontWeight: "bold" }}
-                      >
-                        {item.materialName || item.name || "Unnamed"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "gray", marginTop: "5px" }}
-                      >
-                        Created on:{" "}
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </Box>
-                  </ListItem>
-                ))}
-              </List>
+              <>
+                {selectedIcon === "materials" && (
+                  <MaterialList
+                    listData={listData}
+                    handleEditRedirect={handleEditRedirect}
+                  />
+                )}
+                {selectedIcon === "sun" && (
+                  <LightList
+                    listData={listData}
+                    handleDelete={handleDelete}
+                    handleMakeDefault={handleMakeDefault}
+                    handleSelect={(id) => console.log("Selected", id)}
+                  />
+                )}
+                {selectedIcon === "camera" && (
+                  <CameraList
+                    listData={listData}
+                    handleEditRedirect={handleEditRedirect}
+                  />
+                )}
+              </>
             )}
 
             <Button
@@ -1033,7 +1450,6 @@ const ControlGUI = ({ addMapNode }) => {
           </DialogContent>
         </Dialog>
 
-        {/* Footer Section */}
         <Box
           sx={{
             display: "flex",
@@ -1057,7 +1473,6 @@ const ControlGUI = ({ addMapNode }) => {
             <CachedIcon sx={{ fontSize: "14px" }} />
           </IconButton>
 
-          {/* Load button */}
           <Button
             variant="outlined"
             onClick={handleLoadClick}
@@ -1077,30 +1492,29 @@ const ControlGUI = ({ addMapNode }) => {
             Load
           </Button>
 
-          {/* Save button */}
+          {/* Save button  */}
           <Button
             variant="contained"
-            onClick={handleSave}
             sx={{
-              backgroundColor: "green",
+              backgroundColor: "#529D36",
               color: "white",
               borderRadius: "10px",
               flexGrow: 1,
               fontSize: "10px",
               padding: "5px 10px",
-              "&:hover": {
-                backgroundColor: "darkgreen",
-              },
+              "&:hover": { backgroundColor: "darkgreen" },
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
             }}
             startIcon={<CheckIcon sx={{ fontSize: "12px" }} />}
+            onClick={handleSave}
           >
             Save
           </Button>
         </Box>
       </Box>
+
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
@@ -1128,3 +1542,5 @@ ControlGUI.propTypes = {
 };
 
 export default ControlGUI;
+//v3 - All UI updated
+//v4 - all UI updated aligned with figma

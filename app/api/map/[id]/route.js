@@ -3,21 +3,13 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function GET(request) {
+export async function GET(request, { params }) {
+  const id = "670535713fcc49b60414fabf";
+  console.log("iduguiguyfß", id);
+
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    console.log("idedee", id);
-
-    if (!id) {
-      return NextResponse.json(
-        { status: "error", message: "Fabric ID is required." },
-        { status: 400 }
-      );
-    }
-
-    const map = await prisma.fabricMap.findUnique({
-      where: { id },
+    const project = await prisma.fabricMap.findUnique({
+      where: { id: id },
       select: {
         diffuseMapUrl: true,
         envMapUrl: true,
@@ -57,19 +49,20 @@ export async function GET(request) {
       },
     });
 
-    if (!map) {
+    if (!project) {
       return NextResponse.json(
-        { status: "error", message: `Map with id ${id} not found.` },
+        { status: "error", message: "Project not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ status: "success", map }, { status: 200 });
+    return NextResponse.json({ status: "success", project });
   } catch (error) {
-    console.error("Error fetching fabric map:", error);
+    console.error("Error loading project:", error);
     return NextResponse.json(
-      { status: "error", message: "Failed to fetch fabric map." },
+      { status: "error", message: "Failed to load project" },
       { status: 500 }
     );
   }
 }
+export const revalidate = 0;

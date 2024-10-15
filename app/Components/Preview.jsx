@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useContext, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import {
@@ -14,14 +14,47 @@ import {
   RepeatWrapping,
 } from "three";
 import { LightContext } from "./LightContext";
+import CustomCameraHelper from "./Helper/CustomCameraHelper";
 import { MapContext } from "../MapContext";
+import { CameraContext } from "../Components/CameraContext";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+
+// Component to handle camera updates based on active camera index
+const CameraUpdater = () => {
+  const { camera } = useThree();
+  const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
+    useContext(CameraContext);
+
+  useEffect(() => {
+    if (updateTrigger && cameras.length > 0) {
+      const activeCameraSettings = cameras[activeCameraIndex].settings;
+      camera.position.set(
+        activeCameraSettings.position.x,
+        activeCameraSettings.position.y,
+        activeCameraSettings.position.z
+      );
+      camera.lookAt(
+        activeCameraSettings.target.x,
+        activeCameraSettings.target.y,
+        activeCameraSettings.target.z
+      );
+      camera.near = activeCameraSettings.near;
+      camera.far = activeCameraSettings.far;
+      camera.fov = activeCameraSettings.fov;
+      camera.updateProjectionMatrix();
+      resetUpdateTrigger();
+    }
+  }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
+
+  return null;
+};
 
 const Preview = () => {
   const { lights } = useContext(LightContext);
   const { connectedMaps, materialParams, updateTrigger } =
     useContext(MapContext);
+  const { cameras, activeCameraIndex } = useContext(CameraContext);
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
   const defaultModelPath = "/Tetrad-Ruben-Midi-Standard.fbx";
@@ -36,6 +69,10 @@ const Preview = () => {
       loader.load(
         modelPath,
         (loadedModel) => {
+          if (currentModel) {
+            disposeModel(currentModel);
+          }
+
           loadedModel.traverse((child) => {
             if (child.isMesh) {
               const material = createMaterial();
@@ -67,7 +104,24 @@ const Preview = () => {
     }
   }, [currentModel, updateTrigger, connectedMaps, materialParams]);
 
-  // Create a new material based on materialParams
+  const disposeModel = (model) => {
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.geometry?.dispose();
+
+        if (Array.isArray(child.material)) {
+          child.material.forEach((material) => material.dispose());
+        } else {
+          child.material?.dispose();
+        }
+
+        if (child.material?.map) {
+          child.material.map.dispose();
+        }
+      }
+    });
+  };
+
   const createMaterial = () => {
     return new MeshPhysicalMaterial({
       color: 0xffffff,
@@ -76,7 +130,6 @@ const Preview = () => {
     });
   };
 
-  // Extract material properties from materialParams for easy assignment
   const extractMaterialProperties = () => {
     const sheenColor = new Color(
       materialParams.sheenColor?.r || 0,
@@ -319,7 +372,20 @@ const Preview = () => {
         style={{ display: "none" }}
       />
 
-      <Canvas shadows style={{ backgroundColor: "#EFEFEF" }}>
+      <Canvas
+        shadows
+        style={{ backgroundColor: "#EFEFEF" }}
+        camera={{
+          position: [
+            cameras[activeCameraIndex]?.settings?.position.x || 0,
+            cameras[activeCameraIndex]?.settings?.position.y || 5,
+            cameras[activeCameraIndex]?.settings?.position.z || 10,
+          ],
+          fov: cameras[activeCameraIndex]?.settings?.fov || 50,
+          near: cameras[activeCameraIndex]?.settings?.near || 0.1,
+          far: cameras[activeCameraIndex]?.settings?.far || 1000,
+        }}
+      >
         {lights.map((light) => {
           switch (light.type.toUpperCase()) {
             case "AMBIENT":
@@ -344,6 +410,30 @@ const Preview = () => {
                   bias={0.0001}
                 />
               );
+            case "HEMISPHERE":
+              return (
+                <hemisphereLight
+                  key={light.id}
+                  intensity={light.intensity}
+                  skyColor={light.color || "#ffffff"}
+                  groundColor={light.groundColor || "#0000ff"}
+                />
+              );
+            case "SPOT":
+              return (
+                <spotLight
+                  key={light.id}
+                  intensity={light.intensity}
+                  position={[
+                    light.position?.x || 0,
+                    light.position?.y || 0,
+                    light.position?.z || 0,
+                  ]}
+                  angle={light.angle || 0.3}
+                  decay={light.decay || 2}
+                  castShadow={light.castShadow || false}
+                />
+              );
             default:
               return null;
           }
@@ -351,6 +441,10 @@ const Preview = () => {
         {currentModel && <primitive object={currentModel} />}
         <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
         <OrbitControls />
+        {cameras.map((camera, index) => (
+          <CustomCameraHelper key={index} cameraSettings={camera.settings} />
+        ))}
+        <CameraUpdater />
       </Canvas>
     </>
   );

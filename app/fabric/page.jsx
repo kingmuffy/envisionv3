@@ -39,48 +39,45 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 function FabricPage() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
   const [selectedNode, setSelectedNode] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-
+  const [showReactFlow, setShowReactFlow] = useState(true);
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
 
-  const mapContext = useContext(MapContext);
-  if (!mapContext) {
-    throw new Error("MapContext must be used within a MapProvider");
-  }
+  const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
 
-  const { updateConnectedMaps, disconnectMap } = mapContext;
-
-  const mainNode = {
-    id: "1",
-    type: "mainNode",
-    position: { x: 250, y: 5 },
-    data: {
-      label: "Fabric Name",
-      maps: [
-        "Diffuse",
-        "Environment",
-        "Refraction",
-        "Bump",
-        "Normal",
-        "Displacement",
-        "Clearcoat",
-        "Emissive",
-        "Sheen",
-        "AO",
-        "Metalness",
-        "Roughness",
-        "Anisotropy",
-      ],
-    },
-  };
+  const mainNode = useMemo(
+    () => ({
+      id: "1",
+      type: "mainNode",
+      position: { x: 250, y: 5 },
+      data: {
+        label: "Fabric Name",
+        maps: [
+          "Diffuse",
+          "Environment",
+          "Refraction",
+          "Bump",
+          "Normal",
+          "Displacement",
+          "Clearcoat",
+          "Emissive",
+          "Sheen",
+          "AO",
+          "Metalness",
+          "Roughness",
+          "Anisotropy",
+        ],
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     setNodes([mainNode]);
-  }, [setNodes]);
+  }, [mainNode, setNodes]);
 
   const addMapNode = useCallback(() => {
     const newMapNode = {
@@ -98,17 +95,11 @@ function FabricPage() {
               node.id === nodeId
                 ? {
                     ...node,
-                    data: {
-                      ...node.data,
-                      thumbnail,
-                      label: file.name,
-                      file,
-                    },
+                    data: { ...node.data, thumbnail, label: file.name, file },
                   }
                 : node
             )
           );
-
           const mapNode = nodes.find((node) => node.id === nodeId);
           if (mapNode && mapNode.data.mapType) {
             updateConnectedMaps(mapNode.data.mapType, file);
@@ -118,10 +109,6 @@ function FabricPage() {
     };
     setNodes((nds) => [...nds, newMapNode]);
   }, [nodes, setNodes, updateConnectedMaps]);
-
-  const edgeOptions = {
-    style: { strokeWidth: 4, stroke: "#333" },
-  };
 
   const onConnect = useCallback(
     (params) => {
@@ -139,7 +126,6 @@ function FabricPage() {
 
       if (targetMapType) {
         const mapNodeId = params.source;
-
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
@@ -149,7 +135,6 @@ function FabricPage() {
         );
 
         updateConnectedMaps(targetMapType, sourceNode.data.file);
-        console.log(`Connected map: ${targetMapType} from node ${mapNodeId}`);
       }
       setEdges((eds) => addEdge({ ...params, animated: true }, eds));
     },
@@ -171,9 +156,7 @@ function FabricPage() {
               : node
           )
         );
-
         disconnectMap(mapType);
-        console.log(`Disconnected map: ${mapType}`);
       }
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     },
@@ -202,9 +185,6 @@ function FabricPage() {
     setModalOpen(false);
   }, [selectedNode, setNodes, setEdges, disconnectMap]);
 
-  const closeModal = () => setModalOpen(false);
-  const closeSnackbar = () => setSnackbarOpen(false);
-
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -219,13 +199,16 @@ function FabricPage() {
     }
   };
 
+  const closeModal = () => setModalOpen(false);
+  const closeSnackbar = () => setSnackbarOpen(false);
+
   const nodeTypes = useMemo(
     () => ({ mainNode: MainNode, mapNode: MapNode }),
     []
   );
 
   return (
-    <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+    <div style={{ height: "100vh", width: "100vw" }}>
       {/* Custom Upload Icon */}
       <Box
         sx={{
@@ -254,8 +237,11 @@ function FabricPage() {
 
       <Split
         className="split-container"
-        sizes={[50, 50]}
+        sizes={showReactFlow ? [50, 50] : [100, 0]}
         minSize={100}
+        direction="horizontal"
+        gutterSize={10}
+        cursor="col-resize"
         style={{ height: "100vh" }}
       >
         <div style={{ height: "100%", overflow: "hidden" }}>
@@ -264,31 +250,37 @@ function FabricPage() {
             style={{ height: "100%" }}
           />
         </div>
-        <div style={{ height: "100%", overflow: "hidden" }}>
-          <ReactFlowProvider>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeContextMenu={onNodeContextMenu}
-              onEdgeDoubleClick={onEdgeDoubleClick}
-              fitView
-              defaultEdgeOptions={edgeOptions}
-              style={{ height: "100%" }}
-            >
-              <Controls />
-              <Background />
-            </ReactFlow>
-          </ReactFlowProvider>
-        </div>
+
+        {showReactFlow && (
+          <div style={{ flexGrow: 1, height: "100%", position: "relative" }}>
+            <ReactFlowProvider>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeContextMenu={onNodeContextMenu}
+                onEdgeDoubleClick={onEdgeDoubleClick}
+                fitView
+                defaultEdgeOptions={{
+                  style: { strokeWidth: 4, stroke: "#333" },
+                }}
+                style={{ height: "100%" }}
+              >
+                <Controls />
+                <Background />
+              </ReactFlow>
+            </ReactFlowProvider>
+          </div>
+        )}
       </Split>
 
       <ControlGUI
         addMapNode={addMapNode}
         style={{ height: "100vh", position: "absolute", top: 0 }}
+        setShowReactFlow={setShowReactFlow}
       />
 
       <Dialog open={modalOpen} onClose={closeModal}>

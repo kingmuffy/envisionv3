@@ -1,12 +1,14 @@
-import React, { useRef, useContext } from "react";
+import React, { useRef, useContext, useState } from "react";
 import PropTypes from "prop-types";
 import { Handle, Position } from "reactflow";
 import ImageIcon from "@mui/icons-material/Image";
-import { MapContext } from ".././EditContext";
+import { MapContext } from "../EditContext";
+import axios from "axios";
 
-const MapNode = ({ id, data }) => {
+const EditMapNode = ({ id, data }) => {
   const fileInputRef = useRef(null);
   const { updateConnectedMaps } = useContext(MapContext);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleImageClick = () => {
     if (fileInputRef.current) {
@@ -14,21 +16,37 @@ const MapNode = ({ id, data }) => {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const thumbnail = reader.result;
-        // Update node data (this will update the UI)
-        data.updateNodeData(id, file, thumbnail, file.name);
+      setIsUploading(true);
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const thumbnail = reader.result;
+          data.updateNodeData(id, file, thumbnail);
+        };
+        reader.readAsDataURL(file);
 
-        // Update connected maps in the context
-        if (data.mapType) {
-          updateConnectedMaps(data.mapType, file);
+        const formData = new FormData();
+        formData.append("fabricId", data.fabricId);
+        formData.append("mapType", data.mapType);
+        formData.append("file", file);
+
+        const uploadResponse = await axios.put("/api/update", formData);
+
+        if (uploadResponse.status === 200) {
+          const fileUrl = uploadResponse.data.fileUrl;
+
+          updateConnectedMaps(data.mapType, fileUrl);
+        } else {
+          console.error("Error updating map:", uploadResponse.data.message);
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error uploading file or updating map:", error);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -59,6 +77,7 @@ const MapNode = ({ id, data }) => {
       >
         {data.label || "Map Node"}
       </strong>
+
       <div
         style={{
           width: "50px",
@@ -73,7 +92,9 @@ const MapNode = ({ id, data }) => {
         }}
         onClick={handleImageClick}
       >
-        {data.thumbnail ? (
+        {isUploading ? (
+          <div>Loading...</div>
+        ) : data.thumbnail ? (
           <img
             src={data.thumbnail}
             alt={data.label}
@@ -83,12 +104,14 @@ const MapNode = ({ id, data }) => {
           <ImageIcon style={{ width: "50%", height: "50%", color: "#ccc" }} />
         )}
       </div>
+
       <input
         type="file"
         ref={fileInputRef}
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
+
       <Handle
         type="source"
         position={Position.Right}
@@ -104,14 +127,15 @@ const MapNode = ({ id, data }) => {
   );
 };
 
-MapNode.propTypes = {
+EditMapNode.propTypes = {
   id: PropTypes.string.isRequired,
   data: PropTypes.shape({
     label: PropTypes.string.isRequired,
     updateNodeData: PropTypes.func.isRequired,
     thumbnail: PropTypes.string,
     mapType: PropTypes.string,
+    fabricId: PropTypes.string.isRequired,
   }).isRequired,
 };
 
-export default MapNode;
+export default EditMapNode;

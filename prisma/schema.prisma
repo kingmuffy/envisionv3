@@ -41,15 +41,15 @@ model LightSettings {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   lightType     String
   intensity     Float
-  position      Json
+  position      Json? 
   targetPosition Json?   // Add this field to store target position
   angle         Float?
   decay         Float?
   castShadow    Boolean
+  name          String   ?
   projectId     String   @map("projectId") @db.ObjectId
   project       Project  @relation(fields: [projectId], references: [id])
 }
-
 
 
 

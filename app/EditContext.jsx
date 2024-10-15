@@ -9,6 +9,8 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
   const [connectedMaps, setConnectedMaps] = useState({});
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [materialParams, setMaterialParams] = useState({
+    materialName: initialMaterialParams.materialName || "", // Add materialName here
+
     bumpScale: initialMaterialParams.bumpScale || 0.0,
     sheen: initialMaterialParams.sheen || true,
     displacementScale: initialMaterialParams.displacementScale || 0.0,
@@ -36,24 +38,37 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
 
   useEffect(() => {
     const fetchMaterialParams = async () => {
+      if (!materialId) return;
+
       try {
         const response = await axios.get(`/api/maps?id=${materialId}`);
-        if (response.data.status === "success" && response.data.map) {
-          setMaterialParams((prev) => ({
-            ...prev,
-            ...response.data.map,
-          }));
-        } else {
-          console.error("Failed to fetch material parameters.");
-        }
+        const mapsData = response.data.map;
+
+        setMaterialParams((prev) => ({
+          ...prev,
+          ...mapsData,
+        }));
+
+        setConnectedMaps({
+          diffuseMapUrl: mapsData.diffuseMapUrl || null,
+          bumpMapUrl: mapsData.bumpMapUrl || null,
+          normalMapUrl: mapsData.normalMapUrl || null,
+          displacementMapUrl: mapsData.displacementMapUrl || null,
+          emissiveMapUrl: mapsData.emissiveMapUrl || null,
+          aoMapUrl: mapsData.aoMapUrl || null,
+          metalnessMapUrl: mapsData.metalnessMapUrl || null,
+          roughnessMapUrl: mapsData.roughnessMapUrl || null,
+          clearcoatMapUrl: mapsData.clearcoatMapUrl || null,
+          envMapUrl: mapsData.envMapUrl || null,
+          anisotropyMapUrl: mapsData.anisotropyMapUrl || null,
+          sheenMapUrl: mapsData.sheenMapUrl || null,
+        });
       } catch (error) {
-        console.error("Error fetching material parameters:", error);
+        console.error("Error fetching maps:", error);
       }
     };
 
-    if (materialId) {
-      fetchMaterialParams();
-    }
+    fetchMaterialParams();
   }, [materialId]);
 
   const updateConnectedMaps = (mapType, file) => {

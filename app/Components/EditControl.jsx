@@ -38,9 +38,11 @@ import LightSettings from "./Settings/LightSettings.jsx";
 import { MapContext } from "../EditContext.jsx";
 import { Switch, FormControlLabel } from "@mui/material";
 import { useRouter } from "next/navigation";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+
 import { ChromePicker } from "react-color"; // Import the ChromePicker
 import axios from "axios";
-const ControlGUI = ({ addMapNode }) => {
+const ControlGUI = ({ addMapNode, id }) => {
   const {
     connectedMaps,
     materialParams,
@@ -52,6 +54,8 @@ const ControlGUI = ({ addMapNode }) => {
   const [selectedIcon, setSelectedIcon] = useState("materials");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [expandedPanel, setExpandedPanel] = useState(null);
+  const [lightSceneName, setLightSceneName] = useState("");
 
   // Initialize material parameters from context to reflect the initial values in the UI sliders.
   //   const [bumpScale, setBumpScale] = useState(materialParams.bumpScale || 0.0);
@@ -100,16 +104,12 @@ const ControlGUI = ({ addMapNode }) => {
     setOpen(!open);
   };
 
-  const handleMaterialNameChange = (event) => {
-    setMaterialName(event.target.value);
-  };
-
   const handleIconSelect = (iconName) => {
     setSelectedIcon(iconName);
   };
 
   const handleSave = async () => {
-    if (selectedIcon === "materials" && !materialName.trim()) {
+    if (selectedIcon === "materials" && !materialParams.materialName) {
       setSnackbarMessage("No material name entered, cannot save.");
       setSnackbarOpen(true);
       return;
@@ -117,19 +117,13 @@ const ControlGUI = ({ addMapNode }) => {
 
     try {
       const formData = new FormData();
-      formData.append("materialName", materialName);
+      formData.append("id", id);
 
       for (const [paramName, value] of Object.entries(materialParams)) {
         formData.append(paramName, value);
       }
-      for (const [mapType, file] of Object.entries(connectedMaps)) {
-        if (file) {
-          const formKey = `${mapType.toLowerCase()}MapUrl`;
-          formData.append(formKey, file);
-        }
-      }
 
-      const response = await axios.post("/api/fabric", formData);
+      const response = await axios.put("/api/updateparam", formData);
 
       if (response.data.status === "success") {
         setSnackbarMessage("Fabric data saved successfully!");
@@ -142,6 +136,11 @@ const ControlGUI = ({ addMapNode }) => {
     } finally {
       setSnackbarOpen(true);
     }
+  };
+
+  const handleMaterialNameChange = (event) => {
+    const newValue = event.target.value;
+    updateMaterialParams("materialName", newValue);
   };
 
   const handleBumpScaleChange = (event, newValue) => {
@@ -277,13 +276,17 @@ const ControlGUI = ({ addMapNode }) => {
         onClick={handleToggle}
         sx={{
           position: "fixed",
-          right: open ? "280px" : "0px",
+          right: open ? "300px" : "0px",
           top: "10px",
           zIndex: 1300,
           padding: "4px",
           color: "black",
           backgroundColor: "transparent",
           border: "none",
+          outline: "none",
+          "&:focus": {
+            outline: "none",
+          },
         }}
       >
         <MenuOpenIcon fontSize="small" />
@@ -292,11 +295,11 @@ const ControlGUI = ({ addMapNode }) => {
       <Box
         sx={{
           position: "fixed",
-          right: open ? 0 : "-280px",
+          right: open ? 0 : "-300px",
           top: 0,
-          width: "280px",
+          width: "300px",
           height: "97vh",
-          backgroundColor: "#f5f5f5",
+          backgroundColor: "white",
           boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 12px",
           transition: "right 0.3s ease",
           zIndex: 1200,
@@ -307,17 +310,33 @@ const ControlGUI = ({ addMapNode }) => {
       >
         <AppBar
           position="static"
-          sx={{ backgroundColor: "black", padding: "5px", height: "65px" }}
+          sx={{
+            backgroundColor: "#393A3D",
+            padding: "5px",
+            width: "300px",
+            marginLeft: "auto",
+            marginRight: "auto",
+            borderRadius: "0px 0px 4px 4px",
+          }}
         >
           <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Typography variant="h6" component="div" sx={{ fontSize: "12px" }}>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontSize: "20px", fontFamily: "Avenir, sans-serif" }}
+            >
               {selectedIcon === "sun"
-                ? "Light Scene Name"
+                ? "Light"
                 : selectedIcon === "camera"
-                ? "Camera Setting Name"
+                ? "Camera "
                 : "Materials"}
             </Typography>
-            <Box sx={{ display: "flex", gap: "5px" }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: "8px",
+              }}
+            >
               <IconButton
                 sx={{
                   color: selectedIcon === "materials" ? "white" : "white",
@@ -342,9 +361,8 @@ const ControlGUI = ({ addMapNode }) => {
                 }}
                 onClick={() => handleIconSelect("materials")}
               >
-                <BackupTableIcon fontSize="small" />
+                <BackupTableIcon sx={{ fontSize: "20px" }} />
               </IconButton>
-
               {/* Sun Icon */}
               <IconButton
                 sx={{
@@ -371,7 +389,6 @@ const ControlGUI = ({ addMapNode }) => {
               >
                 <WbSunnyIcon />
               </IconButton>
-
               {/* Camera Icon */}
               <IconButton
                 sx={{
@@ -423,21 +440,150 @@ const ControlGUI = ({ addMapNode }) => {
               }
               variant="outlined"
               className="custom-text-field"
-              value={selectedIcon === "materials" ? materialName : ""}
+              value={
+                selectedIcon === "materials"
+                  ? materialParams.materialName || ""
+                  : selectedIcon === "sun"
+                  ? lightSceneName || ""
+                  : ""
+              }
               onChange={
                 selectedIcon === "materials"
                   ? handleMaterialNameChange
+                  : selectedIcon === "sun"
+                  ? (e) => setLightSceneName(e.target.value)
                   : undefined
               }
               InputLabelProps={{
-                shrink: true,
+                shrink:
+                  selectedIcon === "materials"
+                    ? Boolean(materialParams.materialName)
+                    : selectedIcon === "sun"
+                    ? Boolean(lightSceneName)
+                    : false,
                 style: {
-                  transform: "translate(14px, -6px) scale(0.75)",
+                  position: "absolute",
+                  top:
+                    selectedIcon === "materials" || selectedIcon === "sun"
+                      ? "-5px"
+                      : "50%",
+                  left: "10px",
+                  transform: "translateY(-50%)",
                   backgroundColor: "white",
                   padding: "0 4px",
+                  color: "#C0C3C8",
+                  fontSize: "11px",
                 },
               }}
             />
+          </Box>
+
+          <Box
+            sx={{
+              flexGrow: 0,
+              paddingBottom: "20px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
+              overflowY: "auto",
+              borderBottom: "1px solid #DDDDDD",
+            }}
+          >
+            {selectedIcon === "materials" && (
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "Bold",
+                  fontSize: "12px",
+                  paddingLeft: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                  color: "#282828",
+                  letterSpacing: "1.5px",
+                  fontFamily: "Avenir, sans-serif",
+                }}
+              >
+                CONTROLS
+              </Typography>
+            )}
+
+            {selectedIcon === "camera" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingLeft: "14px",
+                  paddingRight: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  CAMERAS IN SCENE
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  ACTION
+                </Typography>
+              </Box>
+            )}
+
+            {selectedIcon === "sun" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingLeft: "14px",
+                  paddingRight: "14px",
+                  paddingTop: "10px",
+                  paddingBottom: "15px",
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  LIGHTS IN SCENE
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: "Bold",
+                    fontSize: "12px",
+                    color: "#282828",
+                    letterSpacing: "1.5px",
+                    fontFamily: "Avenir, sans-serif",
+                  }}
+                >
+                  ACTION
+                </Typography>
+              </Box>
+            )}
           </Box>
 
           {selectedIcon === "materials" ? (
@@ -476,18 +622,41 @@ const ControlGUI = ({ addMapNode }) => {
                     }}
                   >
                     <AccordionSummary
-                      expandIcon={<ExpandMoreIcon sx={{ fontSize: "12px" }} />}
                       sx={{ minHeight: "20px", padding: "0px", margin: 0 }}
                     >
-                      <Typography
+                      <Box
                         sx={{
-                          fontSize: "8px",
-                          fontWeight: "normal",
-                          margin: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
                         }}
                       >
-                        {control}
-                      </Typography>
+                        {expandedPanel === control ? (
+                          <ExpandMoreIcon sx={{ fontSize: "21px" }} />
+                        ) : (
+                          <ChevronRightIcon sx={{ fontSize: "21px" }} />
+                        )}
+
+                        <Typography
+                          sx={{
+                            width: "117px",
+                            position: "relative",
+                            fontSize: "10px",
+                            letterSpacing: "0.02em",
+                            lineHeight: "35px",
+                            textTransform: "uppercase",
+                            fontWeight: 800,
+                            fontFamily: "Avenir, sans-serif",
+                            color: "#282828",
+                            textAlign: "left",
+                            display: "inline-block",
+                            height: "36px",
+                            margin: 0,
+                          }}
+                        >
+                          {control}
+                        </Typography>
+                      </Box>
                     </AccordionSummary>
                     <AccordionDetails
                       sx={{

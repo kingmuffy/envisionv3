@@ -16,49 +16,45 @@ import { LightContext } from "./LightContext";
 import { MapContext } from "../EditContext";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import axios from "axios"; // For API requests to fetch map URLs
+import axios from "axios";
+
+const mapTypeMappings = {
+  diffuseMapUrl: "DIFFUSE",
+  bumpMapUrl: "BUMP",
+  normalMapUrl: "NORMAL",
+  displacementMapUrl: "DISPLACEMENT",
+  emissiveMapUrl: "EMISSIVE",
+  aoMapUrl: "AO",
+  metalnessMapUrl: "METALNESS",
+  roughnessMapUrl: "ROUGHNESS",
+  clearcoatMapUrl: "CLEARCOAT",
+  envMapUrl: "ENVIRONMENT",
+  anisotropyMapUrl: "ANISOTROPY",
+  sheenMapUrl: "SHEEN",
+};
 
 const Preview = ({ id }) => {
   const { lights } = useContext(LightContext);
-  const mapContext = useContext(MapContext);
-
-  if (!mapContext) {
-    throw new Error("MapContext must be used within a MapProvider");
-  }
-
-  const { materialParams, updateTrigger } = mapContext;
+  const { materialParams, updateTrigger } = useContext(MapContext);
   const [connectedMaps, setConnectedMaps] = useState({});
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
   const defaultModelPath = "/Tetrad-Ruben-Midi-Standard.fbx";
   const fileInputRef = useRef(null);
-  const textureLoader = useRef(new TextureLoader()).current;
+  const textureLoader = new TextureLoader();
 
-  textureLoader.crossOrigin = "anonymous"; // Ensure cross-origin requests are allowed
-
-  // Fetch maps from the backend using the provided 'id'
   useEffect(() => {
-    const fetchMaps = async () => {
+    const fetchMaps = async (id) => {
       try {
         const response = await axios.get(`/api/maps?id=${id}`);
         const data = response.data.map;
-
-        const initialMaps = {
-          DIFFUSE: data.diffuseMapUrl || null,
-          ENVIRONMENT: data.envMapUrl || null,
-          REFRACTION: data.refractionMapUrl || null,
-          BUMP: data.bumpMapUrl || null,
-          NORMAL: data.normalMapUrl || null,
-          DISPLACEMENT: data.displacementMapUrl || null,
-          CLEARCOAT: data.clearcoatMapUrl || null,
-          EMISSIVE: data.emissiveMapUrl || null,
-          SHEEN: data.sheenMapUrl || null,
-          AO: data.aoMapUrl || null,
-          METALNESS: data.metalnessMapUrl || null,
-          ROUGHNESS: data.roughnessMapUrl || null,
-          ANISOTROPY: data.anisotropyMapUrl || null,
-        };
-
+        const initialMaps = Object.keys(data).reduce((acc, key) => {
+          const mapType = mapTypeMappings[key];
+          if (mapType && data[key]) {
+            acc[mapType] = data[key];
+          }
+          return acc;
+        }, {});
         setConnectedMaps(initialMaps);
       } catch (error) {
         console.error("Error fetching maps from backend:", error);
@@ -66,11 +62,10 @@ const Preview = ({ id }) => {
     };
 
     if (id) {
-      fetchMaps();
+      fetchMaps(id);
     }
-  }, [id]);
+  }, [id, updateTrigger]);
 
-  // Load the 3D model (FBX)
   useEffect(() => {
     const modelPath = uploadedModelPath || defaultModelPath;
 
@@ -99,7 +94,6 @@ const Preview = ({ id }) => {
     loadModel();
   }, [uploadedModelPath]);
 
-  // Update material properties and apply maps from connectedMaps
   useEffect(() => {
     if (currentModel) {
       currentModel.traverse((child) => {
@@ -109,7 +103,7 @@ const Preview = ({ id }) => {
         }
       });
     }
-  }, [currentModel, connectedMaps, updateTrigger]);
+  }, [currentModel, connectedMaps, updateTrigger, materialParams]);
 
   const createMaterial = () => {
     return new MeshPhysicalMaterial({
@@ -156,7 +150,6 @@ const Preview = ({ id }) => {
       materialParams.normalScaleX || 1,
       materialParams.normalScaleY || 1
     );
-    material.side = DoubleSide;
     material.needsUpdate = true;
   };
 
@@ -180,8 +173,11 @@ const Preview = ({ id }) => {
   };
 
   const loadUrlTexture = (material, mapType, texturePath) => {
+    const proxyUrl = `/api/proxy?url=${encodeURIComponent(texturePath)}`;
+
     textureLoader.load(
-      texturePath,
+      proxyUrl,
+
       (texture) => {
         texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(
           mapType.toUpperCase()
@@ -210,101 +206,44 @@ const Preview = ({ id }) => {
 
   const loadBase64Texture = (material, mapType, base64Texture) => {
     const texture = textureLoader.load(base64Texture);
-    texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(mapType.toUpperCase())
-      ? SRGBColorSpace
-      : LinearSRGBColorSpace;
-
     assignTextureToMaterial(material, mapType, texture);
   };
 
   const resetSpecificMap = (material, mapType) => {
-    switch (mapType.toUpperCase()) {
-      case "DIFFUSE":
-        material.map = null;
-        break;
-      case "SHEEN":
-        material.sheenColorMap = null;
-        break;
-      case "CLEARCOAT":
-        material.clearcoatMap = null;
-        break;
-      case "BUMP":
-        material.bumpMap = null;
-        break;
-      case "NORMAL":
-        material.normalMap = null;
-        break;
-      case "DISPLACEMENT":
-        material.displacementMap = null;
-        break;
-      case "EMISSIVE":
-        material.emissiveMap = null;
-        break;
-      case "AO":
-        material.aoMap = null;
-        break;
-      case "METALNESS":
-        material.metalnessMap = null;
-        break;
-      case "ROUGHNESS":
-        material.roughnessMap = null;
-        break;
-      case "ENVIRONMENT":
-        material.envMap = null;
-        break;
-      case "ANISOTROPY":
-        material.anisotropyMap = null;
-        break;
-      default:
-        console.warn(`Unknown map type: ${mapType}`);
-        break;
-    }
-
+    const resetMappings = {
+      DIFFUSE: "map",
+      SHEEN: "sheenColorMap",
+      CLEARCOAT: "clearcoatMap",
+      BUMP: "bumpMap",
+      NORMAL: "normalMap",
+      DISPLACEMENT: "displacementMap",
+      EMISSIVE: "emissiveMap",
+      AO: "aoMap",
+      METALNESS: "metalnessMap",
+      ROUGHNESS: "roughnessMap",
+      ENVIRONMENT: "envMap",
+      ANISOTROPY: "anisotropyMap",
+    };
+    material[resetMappings[mapType.toUpperCase()]] = null;
     material.needsUpdate = true;
   };
 
   const assignTextureToMaterial = (material, mapType, texture) => {
-    switch (mapType.toUpperCase()) {
-      case "DIFFUSE":
-        material.map = texture;
-        break;
-      case "SHEEN":
-        material.sheenColorMap = texture;
-        break;
-      case "CLEARCOAT":
-        material.clearcoatMap = texture;
-        break;
-      case "BUMP":
-        material.bumpMap = texture;
-        break;
-      case "NORMAL":
-        material.normalMap = texture;
-        break;
-      case "DISPLACEMENT":
-        material.displacementMap = texture;
-        break;
-      case "EMISSIVE":
-        material.emissiveMap = texture;
-        break;
-      case "AO":
-        material.aoMap = texture;
-        break;
-      case "METALNESS":
-        material.metalnessMap = texture;
-        break;
-      case "ROUGHNESS":
-        material.roughnessMap = texture;
-        break;
-      case "ENVIRONMENT":
-        material.envMap = texture;
-        break;
-      case "ANISOTROPY":
-        material.anisotropyMap = texture;
-        break;
-      default:
-        console.warn(`Unknown map type: ${mapType}`);
-        break;
-    }
+    const mapMappings = {
+      DIFFUSE: "map",
+      SHEEN: "sheenColorMap",
+      CLEARCOAT: "clearcoatMap",
+      BUMP: "bumpMap",
+      NORMAL: "normalMap",
+      DISPLACEMENT: "displacementMap",
+      EMISSIVE: "emissiveMap",
+      AO: "aoMap",
+      METALNESS: "metalnessMap",
+      ROUGHNESS: "roughnessMap",
+      ENVIRONMENT: "envMap",
+      ANISOTROPY: "anisotropyMap",
+    };
+    material[mapMappings[mapType.toUpperCase()]] = texture;
     material.needsUpdate = true;
   };
 

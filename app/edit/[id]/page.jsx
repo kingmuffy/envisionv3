@@ -4,11 +4,10 @@ import React, {
   useCallback,
   useState,
   useMemo,
-  useContext,
   useEffect,
   useRef,
+  useContext,
 } from "react";
-import { useRouter } from "next/navigation";
 import Split from "react-split";
 import Preview from "../../Components/EditPreview";
 import {
@@ -37,20 +36,21 @@ import {
   Box,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import axios from "axios";
 
 function FabricPage({ params }) {
-  const router = useRouter(); // Use useRouter to get the id
-  const { id } = params; // Get the dynamic id from the URL
+  const { id } = params;
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
   const [selectedNode, setSelectedNode] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [currentModel, setCurrentModel] = useState(null);
 
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
+  const [deletedMaps, setDeletedMaps] = useState({});
 
   const mapContext = useContext(MapContext);
   if (!mapContext) {
@@ -59,40 +59,125 @@ function FabricPage({ params }) {
 
   const { updateConnectedMaps, disconnectMap, setInitialId } = mapContext;
 
-  // Set the initial ID from the dynamic route when the component mounts
+  // Callback to receive currentModel from Preview
+  const handleModelLoaded = useCallback((model) => {
+    setCurrentModel(model); // Store the current model for future use
+  }, []);
+
   useEffect(() => {
     if (id) {
-      setInitialId(id); // Call the context function to set the initial id from the URL param
+      setInitialId(id); // Set initial ID for context
+      fetchMapData(id); // Fetch map data once when id changes
     }
-  }, [id, setInitialId]);
+  }, [id]);
 
-  const mainNode = {
-    id: "1",
-    type: "mainNode",
-    position: { x: 250, y: 5 },
-    data: {
-      label: "Fabric Name",
-      maps: [
-        "Diffuse",
-        "Environment",
-        "Refraction",
-        "Bump",
-        "Normal",
-        "Displacement",
-        "Clearcoat",
-        "Emissive",
-        "Sheen",
-        "AO",
-        "Metalness",
-        "Roughness",
-        "Anisotropy",
-      ],
-    },
+  const fetchMapData = async (id) => {
+    try {
+      const response = await axios.get(`/api/maps?id=${id}`);
+      const mapsData = response.data.map;
+
+      const initialMaps = {
+        Diffuse: mapsData.diffuseMapUrl,
+        Environment: mapsData.envMapUrl,
+        Refraction: mapsData.refractionMapUrl,
+        Bump: mapsData.bumpMapUrl,
+        Normal: mapsData.normalMapUrl,
+        Displacement: mapsData.displacementMapUrl,
+        Clearcoat: mapsData.clearcoatMapUrl,
+        Emissive: mapsData.emissiveMapUrl,
+        Sheen: mapsData.sheenMapUrl,
+        AO: mapsData.aoMapUrl,
+        Metalness: mapsData.metalnessMapUrl,
+        Roughness: mapsData.roughnessMapUrl,
+        Anisotropy: mapsData.anisotropyMapUrl,
+      };
+
+      const mapNodes = Object.entries(initialMaps)
+        .filter(([mapType, mapUrl]) => mapUrl && !deletedMaps[mapType]) // Filter out deleted maps
+        .map(([mapType, mapUrl], index) => {
+          const mapNodeId = `map-${index + 1}`;
+          return {
+            id: mapNodeId,
+            type: "mapNode",
+            position: {
+              x: Math.random() * 150 + 150,
+              y: Math.random() * 250 + 50,
+            },
+            data: {
+              label: mapType,
+              thumbnail: mapUrl,
+              mapType,
+              fabricId: id,
+              updateNodeData: (nodeId, file, thumbnail) => {
+                setNodes((nds) =>
+                  nds.map((node) =>
+                    node.id === nodeId
+                      ? {
+                          ...node,
+                          data: {
+                            ...node.data,
+                            thumbnail,
+                            file,
+                            label: file.name,
+                          },
+                        }
+                      : node
+                  )
+                );
+                updateConnectedMaps(mapType, file);
+              },
+            },
+          };
+        });
+
+      setNodes((prevNodes) => [...prevNodes, ...mapNodes]);
+      setEdges((prevEdges) =>
+        mapNodes.map((mapNode, index) => ({
+          id: `edge-${mapNode.id}`,
+          source: mapNode.id,
+          target: "1",
+          targetHandle: `handle-${index}`,
+          animated: true,
+          data: {
+            mapType: mapNode.data.mapType, // Attach the mapType to the edge
+          },
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching map data:", error);
+    }
   };
+
+  const mainNode = useMemo(
+    () => ({
+      id: "1",
+      type: "mainNode",
+      position: { x: 250, y: 5 },
+      data: {
+        label: "Fabric Name",
+        maps: [
+          "Diffuse",
+          "Environment",
+          "Refraction",
+          "Bump",
+          "Normal",
+          "Displacement",
+          "Clearcoat",
+          "Emissive",
+          "Sheen",
+          "AO",
+          "Metalness",
+          "Roughness",
+          "Anisotropy",
+        ],
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     setNodes([mainNode]);
-  }, [setNodes]);
+  }, [mainNode]);
 
   const addMapNode = useCallback(() => {
     const newMapNode = {
@@ -128,12 +213,9 @@ function FabricPage({ params }) {
         },
       },
     };
+
     setNodes((nds) => [...nds, newMapNode]);
   }, [nodes, setNodes, updateConnectedMaps]);
-
-  const edgeOptions = {
-    style: { strokeWidth: 4, stroke: "#333" },
-  };
 
   const onConnect = useCallback(
     (params) => {
@@ -161,9 +243,14 @@ function FabricPage({ params }) {
         );
 
         updateConnectedMaps(targetMapType, sourceNode.data.file);
-        console.log(`Connected map: ${targetMapType} from node ${mapNodeId}`);
+
+        setEdges((eds) =>
+          addEdge(
+            { ...params, animated: true, data: { mapType: targetMapType } },
+            eds
+          )
+        );
       }
-      setEdges((eds) => addEdge({ ...params, animated: true }, eds));
     },
     [nodes, setNodes, setEdges, updateConnectedMaps]
   );
@@ -183,20 +270,25 @@ function FabricPage({ params }) {
               : node
           )
         );
-
         disconnectMap(mapType);
-        console.log(`Disconnected map: ${mapType}`);
       }
+
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     },
-    [nodes, setNodes, setEdges, disconnectMap]
+    [nodes, disconnectMap, setNodes, setEdges]
   );
 
-  const onNodeContextMenu = useCallback((event, node) => {
-    event.preventDefault();
-    setSelectedNode(node);
-    setModalOpen(true);
-  }, []);
+  const onEdgeRemove = useCallback(
+    (edges) => {
+      edges.forEach((edge) => {
+        const mapType = edge.data?.mapType;
+        if (mapType) {
+          disconnectMap(mapType);
+        }
+      });
+    },
+    [disconnectMap]
+  );
 
   const confirmDeleteNode = useCallback(() => {
     if (selectedNode) {
@@ -238,7 +330,6 @@ function FabricPage({ params }) {
 
   return (
     <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
-      {/* Custom Upload Icon */}
       <Box
         sx={{
           position: "fixed",
@@ -275,6 +366,7 @@ function FabricPage({ params }) {
             uploadedModelPath={uploadedModelPath}
             style={{ height: "100%" }}
             id={id}
+            onModelLoaded={handleModelLoaded}
           />
         </div>
         <div style={{ height: "100%", overflow: "hidden" }}>
@@ -286,10 +378,15 @@ function FabricPage({ params }) {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onNodeContextMenu={onNodeContextMenu}
+              onEdgesDelete={onEdgeRemove}
+              onNodeContextMenu={(event, node) => {
+                event.preventDefault();
+                setSelectedNode(node);
+                setModalOpen(true);
+              }}
               onEdgeDoubleClick={onEdgeDoubleClick}
               fitView
-              defaultEdgeOptions={edgeOptions}
+              defaultEdgeOptions={{ style: { strokeWidth: 4, stroke: "#333" } }}
               style={{ height: "100%" }}
             >
               <Controls />
@@ -300,6 +397,7 @@ function FabricPage({ params }) {
       </Split>
 
       <ControlGUI
+        id={id}
         addMapNode={addMapNode}
         style={{ height: "100vh", position: "absolute", top: 0 }}
       />
