@@ -20,7 +20,6 @@ import { CameraContext } from "../Components/CameraContext";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
-// Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
   const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =

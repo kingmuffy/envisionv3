@@ -262,10 +262,14 @@ function FabricPage() {
     }),
     [triggerDeleteModal]
   );
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
-      {/* Custom Upload Icon */}
       <Box
         sx={{
           position: "fixed",
