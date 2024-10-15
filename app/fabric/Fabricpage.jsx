@@ -45,6 +45,7 @@ function FabricPage() {
   const [showReactFlow, setShowReactFlow] = useState(true);
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState(""); // New state to store uploaded file name
 
   const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
 
@@ -79,36 +80,6 @@ function FabricPage() {
     setNodes([mainNode]);
   }, [mainNode, setNodes]);
 
-  // const addMapNode = useCallback(() => {
-  //   const newMapNode = {
-  //     id: `map-${nodes.length + 1}`,
-  //     type: "mapNode",
-  //     position: { x: Math.random() * 150 + 150, y: Math.random() * 250 + 50 },
-  //     data: {
-  //       label: "Upload a map",
-  //       thumbnail: null,
-  //       mapType: null,
-  //       file: null,
-  //       updateNodeData: (nodeId, file, thumbnail) => {
-  //         setNodes((nds) =>
-  //           nds.map((node) =>
-  //             node.id === nodeId
-  //               ? {
-  //                   ...node,
-  //                   data: { ...node.data, thumbnail, label: file.name, file },
-  //                 }
-  //               : node
-  //           )
-  //         );
-  //         const mapNode = nodes.find((node) => node.id === nodeId);
-  //         if (mapNode && mapNode.data.mapType) {
-  //           updateConnectedMaps(mapNode.data.mapType, file);
-  //         }
-  //       },
-  //     },
-  //   };
-  //   setNodes((nds) => [...nds, newMapNode]);
-  // }, [nodes, setNodes, updateConnectedMaps]);
   const addMapNode = useCallback(() => {
     const mainNode = nodes.find((node) => node.id === "1");
     const mainNodeX = mainNode?.position?.x || 250;
@@ -236,19 +207,20 @@ function FabricPage() {
     setModalOpen(false);
   }, [selectedNode, setNodes, setEdges, disconnectMap]);
 
-  const handleFileUploadClick = () => {
+  const handleFileUploadClick = useCallback(() => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  };
+  }, []);
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = useCallback((event) => {
     const file = event.target.files[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setUploadedModelPath(url);
+      setUploadedFileName(file.name); // Store the uploaded file name
     }
-  };
+  }, []);
 
   const closeModal = () => setModalOpen(false);
   const closeSnackbar = () => setSnackbarOpen(false);
@@ -262,6 +234,7 @@ function FabricPage() {
     }),
     [triggerDeleteModal]
   );
+
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -270,6 +243,7 @@ function FabricPage() {
 
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
+      {/* Custom Upload Icon */}
       <Box
         sx={{
           position: "fixed",
@@ -307,6 +281,7 @@ function FabricPage() {
         <div style={{ height: "100%", overflow: "hidden" }}>
           <Preview
             uploadedModelPath={uploadedModelPath}
+            fileName={uploadedFileName} // Pass file name to Preview if needed
             style={{ height: "100%" }}
           />
         </div>
