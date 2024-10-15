@@ -33,6 +33,7 @@ import {
   Alert,
   IconButton,
   Box,
+  CircularProgress, // Import CircularProgress
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
@@ -45,9 +46,11 @@ function FabricPage() {
   const [showReactFlow, setShowReactFlow] = useState(true);
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
-  const [uploadedFileName, setUploadedFileName] = useState(""); // New state to store uploaded file name
 
   const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
+
+  // Loader state
+  const [isLoading, setIsLoading] = useState(false); // New loading state
 
   const mainNode = useMemo(
     () => ({
@@ -158,13 +161,18 @@ function FabricPage() {
   );
 
   const onEdgeDoubleClick = useCallback(
-    (event, edge) => {
+    async (event, edge) => {
       event.stopPropagation();
       const mapNodeId = edge.source;
       const mapType = nodes.find((node) => node.id === mapNodeId)?.data
         ?.mapType;
 
       if (mapType) {
+        setIsLoading(true); // Set loading to true
+
+        // Simulate a disconnection delay (if needed)
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
@@ -173,6 +181,7 @@ function FabricPage() {
           )
         );
         disconnectMap(mapType);
+        setIsLoading(false); // Set loading to false
       }
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     },
@@ -207,20 +216,19 @@ function FabricPage() {
     setModalOpen(false);
   }, [selectedNode, setNodes, setEdges, disconnectMap]);
 
-  const handleFileUploadClick = useCallback(() => {
+  const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  }, []);
+  };
 
-  const handleFileUpload = useCallback((event) => {
+  const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setUploadedModelPath(url);
-      setUploadedFileName(file.name); // Store the uploaded file name
     }
-  }, []);
+  };
 
   const closeModal = () => setModalOpen(false);
   const closeSnackbar = () => setSnackbarOpen(false);
@@ -234,12 +242,6 @@ function FabricPage() {
     }),
     [triggerDeleteModal]
   );
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
@@ -281,7 +283,6 @@ function FabricPage() {
         <div style={{ height: "100%", overflow: "hidden" }}>
           <Preview
             uploadedModelPath={uploadedModelPath}
-            fileName={uploadedFileName} // Pass file name to Preview if needed
             style={{ height: "100%" }}
           />
         </div>
@@ -311,6 +312,20 @@ function FabricPage() {
           </div>
         )}
       </Split>
+
+      {isLoading && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1000,
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
 
       <ControlGUI
         addMapNode={addMapNode}
