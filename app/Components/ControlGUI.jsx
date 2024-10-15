@@ -36,7 +36,7 @@ import CameraSettings from "./Settings/CameraSettings";
 import ColorPicker from "./Styles/ColorPicker.jsx";
 import LightSettings from "./Settings/LightSettings.jsx";
 import { LightContext } from "../Components/LightContext.jsx";
-
+import { CameraContext } from "../Components/CameraContext.jsx";
 import { MapContext } from "../MapContext.jsx";
 import { Switch, FormControlLabel } from "@mui/material";
 import { ChromePicker } from "react-color";
@@ -87,6 +87,8 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [listData, setListData] = useState([]);
   const [lightSceneName, setLightSceneName] = useState("");
   const [expandedPanel, setExpandedPanel] = useState(null);
+  const [cameraSceneName, setCameraSceneName] = useState("");
+  const { saveCameraSettings } = useContext(CameraContext);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedPanel(isExpanded ? panel : null);
@@ -95,27 +97,27 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const handleToggle = () => {
     setOpen(!open);
   };
-  const handleSaveCamera = () => {
-    const activeCamera =
-      cameras.length > 0 ? cameras[cameras.length - 1] : null;
+  // const handleSaveCamera = () => {
+  //   const activeCamera =
+  //     cameras.length > 0 ? cameras[cameras.length - 1] : null;
 
-    if (!activeCamera) {
-      setSnackbarMessage("No camera data available to save.");
-      setSnackbarOpen(true);
-      return;
-    }
+  //   if (!activeCamera) {
+  //     setSnackbarMessage("No camera data available to save.");
+  //     setSnackbarOpen(true);
+  //     return;
+  //   }
 
-    saveCameraSettings(activeCamera)
-      .then(() => {
-        setSnackbarMessage("Camera settings saved successfully!");
-        setSnackbarOpen(true);
-      })
-      .catch((error) => {
-        console.error("Error saving camera:", error);
-        setSnackbarMessage("Failed to save camera settings.");
-        setSnackbarOpen(true);
-      });
-  };
+  //   saveCameraSettings(activeCamera)
+  //     .then(() => {
+  //       setSnackbarMessage("Camera settings saved successfully!");
+  //       setSnackbarOpen(true);
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error saving camera:", error);
+  //       setSnackbarMessage("Failed to save camera settings.");
+  //       setSnackbarOpen(true);
+  //     });
+  // };
   const handleMaterialNameChange = (event) => {
     setMaterialName(event.target.value);
   };
@@ -135,6 +137,37 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     } catch (error) {
       console.error("Error deleting project:", error);
       setSnackbarMessage("Failed to delete project and related light scenes.");
+    }
+    setSnackbarOpen(true);
+  };
+  const handleDeletecamera = async (id) => {
+    try {
+      await axios.delete("/api/deletecamera", { data: { id } });
+      setListData((prevData) => prevData.filter((item) => item.id !== id));
+      setSnackbarMessage(
+        "Project and related Camera scenes deleted successfully."
+      );
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      setSnackbarMessage("Failed to delete project and related Camera scenes.");
+    }
+
+    setSnackbarOpen(true);
+  };
+
+  const handleMakeDefaultcamera = async (id) => {
+    try {
+      await axios.post("/api/defaultcamera", { id });
+      setSnackbarMessage("Camera scene set as default.");
+      setListData((prevData) =>
+        prevData.map((item) => ({
+          ...item,
+          isDefault: item.id === id,
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      setSnackbarMessage("Failed to set default.");
     }
     setSnackbarOpen(true);
   };
@@ -160,12 +193,17 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const handleSave = async () => {
     if (
       (selectedIcon === "materials" && !materialName.trim()) ||
-      (selectedIcon === "sun" && !lightSceneName.trim())
+      (selectedIcon === "sun" && !lightSceneName.trim()) ||
+      (selectedIcon === "camera" && !cameraSceneName.trim())
     ) {
       const message =
         selectedIcon === "materials"
           ? "No material name entered, cannot save."
-          : "Please enter a name for the light scene.";
+          : selectedIcon === "sun"
+          ? "Please enter a name for the light scene."
+          : selectedIcon === "camera"
+          ? "Please enter a name for the camera scene."
+          : "No name entered, cannot save.";
 
       setSnackbarMessage(message);
       setSnackbarOpen(true);
@@ -199,9 +237,8 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         await handleSaveLights(lightSceneName);
         setSnackbarMessage("Light settings saved successfully!");
       } else if (selectedIcon === "camera") {
-        const response = await axios.post("/api/cameras", {});
-
-        if (response.data.status === "success") {
+        const response = await saveCameraSettings(cameraSceneName); // Expect the return from saveCameraSettings
+        if (response.status === "success") {
           setSnackbarMessage("Camera settings saved successfully!");
         } else {
           setSnackbarMessage("Failed to save camera settings.");
@@ -211,7 +248,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
     } finally {
-      setSnackbarOpen(true);
+      setSnackbarOpen(true); // Show snackbar regardless of success or error
     }
   };
 
@@ -552,6 +589,8 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                   ? materialName
                   : selectedIcon === "sun"
                   ? lightSceneName
+                  : selectedIcon === "camera"
+                  ? cameraSceneName
                   : ""
               }
               onChange={
@@ -559,6 +598,8 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                   ? handleMaterialNameChange
                   : selectedIcon === "sun"
                   ? (e) => setLightSceneName(e.target.value)
+                  : selectedIcon === "camera"
+                  ? (e) => setCameraSceneName(e.target.value)
                   : undefined
               }
               InputLabelProps={{
@@ -1308,6 +1349,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             >
               <Button
                 variant="contained"
+                hidden
                 sx={{
                   backgroundColor: "#529D36",
                   color: "white",
@@ -1329,6 +1371,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             </Box>
           ) : selectedIcon === "sun" ? (
             <Button
+              hidden
               variant="contained"
               sx={{
                 backgroundColor: "green",
@@ -1359,6 +1402,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             >
               <Button
                 variant="contained"
+                hidden
                 sx={{
                   backgroundColor: "#529D36",
                   color: "white",
@@ -1421,7 +1465,9 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                 {selectedIcon === "camera" && (
                   <CameraList
                     listData={listData}
-                    handleEditRedirect={handleEditRedirect}
+                    handleDelete={handleDeletecamera}
+                    handleMakeDefault={handleMakeDefaultcamera}
+                    handleSelectcamera={(id) => console.log("Selected", id)}
                   />
                 )}
               </>

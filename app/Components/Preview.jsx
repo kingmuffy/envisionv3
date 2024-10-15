@@ -49,7 +49,35 @@ const CameraUpdater = () => {
 
   return null;
 };
+//model loading issue fix
+const PreviewScene = ({ model, setCurrentModel }) => {
+  const { scene } = useThree();
 
+  useEffect(() => {
+    if (model) {
+      console.log("Adding new model to scene", model);
+      scene.add(model);
+      setCurrentModel(model);
+      return () => {
+        console.log("Removing previous model from scene", model);
+        scene.remove(model);
+        model.traverse((child) => {
+          if (child.isMesh) {
+            console.log("Disposing geometry and material of:", child.name);
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      };
+    }
+  }, [model, scene, setCurrentModel]);
+
+  return null;
+};
 const Preview = () => {
   const { lights } = useContext(LightContext);
   const { connectedMaps, materialParams, updateTrigger } =
@@ -69,9 +97,9 @@ const Preview = () => {
       loader.load(
         modelPath,
         (loadedModel) => {
-          if (currentModel) {
-            disposeModel(currentModel);
-          }
+          // if (currentModel) {
+          //   disposeModel(currentModel);
+          // }
 
           loadedModel.traverse((child) => {
             if (child.isMesh) {
@@ -438,7 +466,13 @@ const Preview = () => {
               return null;
           }
         })}
-        {currentModel && <primitive object={currentModel} />}
+        {/* {currentModel && <primitive object={currentModel} />} */}
+        {currentModel && (
+          <PreviewScene
+            model={currentModel}
+            setCurrentModel={setCurrentModel}
+          />
+        )}
         <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
         <OrbitControls />
         {cameras.map((camera, index) => (

@@ -79,11 +79,49 @@ function FabricPage() {
     setNodes([mainNode]);
   }, [mainNode, setNodes]);
 
+  // const addMapNode = useCallback(() => {
+  //   const newMapNode = {
+  //     id: `map-${nodes.length + 1}`,
+  //     type: "mapNode",
+  //     position: { x: Math.random() * 150 + 150, y: Math.random() * 250 + 50 },
+  //     data: {
+  //       label: "Upload a map",
+  //       thumbnail: null,
+  //       mapType: null,
+  //       file: null,
+  //       updateNodeData: (nodeId, file, thumbnail) => {
+  //         setNodes((nds) =>
+  //           nds.map((node) =>
+  //             node.id === nodeId
+  //               ? {
+  //                   ...node,
+  //                   data: { ...node.data, thumbnail, label: file.name, file },
+  //                 }
+  //               : node
+  //           )
+  //         );
+  //         const mapNode = nodes.find((node) => node.id === nodeId);
+  //         if (mapNode && mapNode.data.mapType) {
+  //           updateConnectedMaps(mapNode.data.mapType, file);
+  //         }
+  //       },
+  //     },
+  //   };
+  //   setNodes((nds) => [...nds, newMapNode]);
+  // }, [nodes, setNodes, updateConnectedMaps]);
   const addMapNode = useCallback(() => {
+    const mainNode = nodes.find((node) => node.id === "1");
+    const mainNodeX = mainNode?.position?.x || 250;
+    const mainNodeY = mainNode?.position?.y || 5;
+    const gap = 10;
+
     const newMapNode = {
       id: `map-${nodes.length + 1}`,
       type: "mapNode",
-      position: { x: Math.random() * 150 + 150, y: Math.random() * 250 + 50 },
+      position: {
+        x: mainNodeX - 220 - gap,
+        y: mainNodeY + 50,
+      },
       data: {
         label: "Upload a map",
         thumbnail: null,
@@ -95,11 +133,17 @@ function FabricPage() {
               node.id === nodeId
                 ? {
                     ...node,
-                    data: { ...node.data, thumbnail, label: file.name, file },
+                    data: {
+                      ...node.data,
+                      thumbnail,
+                      label: file.name,
+                      file,
+                    },
                   }
                 : node
             )
           );
+
           const mapNode = nodes.find((node) => node.id === nodeId);
           if (mapNode && mapNode.data.mapType) {
             updateConnectedMaps(mapNode.data.mapType, file);
@@ -107,6 +151,7 @@ function FabricPage() {
         },
       },
     };
+
     setNodes((nds) => [...nds, newMapNode]);
   }, [nodes, setNodes, updateConnectedMaps]);
 
@@ -169,6 +214,12 @@ function FabricPage() {
     setModalOpen(true);
   }, []);
 
+  const triggerDeleteModal = useCallback((node) => {
+    console.log("Triggering delete modal for node:", node);
+    setSelectedNode(node);
+    setModalOpen(true);
+  }, []);
+
   const confirmDeleteNode = useCallback(() => {
     if (selectedNode) {
       const { id, data } = selectedNode;
@@ -203,8 +254,13 @@ function FabricPage() {
   const closeSnackbar = () => setSnackbarOpen(false);
 
   const nodeTypes = useMemo(
-    () => ({ mainNode: MainNode, mapNode: MapNode }),
-    []
+    () => ({
+      mainNode: MainNode,
+      mapNode: (props) => (
+        <MapNode {...props} onTriggerDelete={triggerDeleteModal} />
+      ),
+    }),
+    [triggerDeleteModal]
   );
 
   return (
@@ -265,9 +321,9 @@ function FabricPage() {
                 onEdgeDoubleClick={onEdgeDoubleClick}
                 fitView
                 defaultEdgeOptions={{
-                  style: { strokeWidth: 4, stroke: "#333" },
+                  style: { strokeWidth: 4, stroke: "#6EB057" },
                 }}
-                style={{ height: "100%" }}
+                style={{ height: "100%", background: "#D5D7DB" }}
               >
                 <Controls />
                 <Background />

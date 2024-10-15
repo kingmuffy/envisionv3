@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const defaultProject = await prisma.project.findFirst({
       where: { isDefault: true },
-      include: { lightSettings: true }, // Include the associated light settings
+      include: { lightSettings: true },
     });
 
     console.log("Fetched default project:", defaultProject);

@@ -23,6 +23,7 @@ import {
   DialogTitle,
   Tooltip,
   Divider,
+  snackbarMessage,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import CustomSlider from "../Styles/CustomSlider";
@@ -50,7 +51,6 @@ const CameraSettings = () => {
   const [cameraName, setCameraName] = useState("");
 
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [selectedCameraIndex, setSelectedCameraIndex] = useState(null);
   const [cameraChanged, setCameraChanged] = useState(false);
   //  rename dialog

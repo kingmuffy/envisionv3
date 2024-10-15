@@ -1,12 +1,13 @@
-// File: MainNode.jsx
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import React from "react";
 import { Handle, Position } from "reactflow";
-import { Tooltip } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Tooltip } from "@mui/material";
 
 const mapInfo = {
   Diffuse: "Defines the base color of the material.",
-  Reflection: "Controls the reflectivity of the surface.",
+  Environment: "Controls environmental settings.",
   Refraction: "Determines how light bends through the material.",
   Bump: "Adds surface detail without changing geometry.",
   Normal:
@@ -23,37 +24,60 @@ const mapInfo = {
 const MainNode = ({ data }) => (
   <div
     style={{
-      padding: "12px 15px",
-      backgroundColor: "#f5f5f5",
+      padding: "12px 0px",
+      backgroundColor: "#fff",
       border: "1px solid #ddd",
       borderRadius: "12px",
       width: "280px",
       color: "#333",
-      fontFamily: "Barlow, sans-serif",
+
+      fontFamily: "Avenir, sans-serif",
       position: "relative",
       boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
     }}
   >
-    <strong
+    <div>
+      <strong
+        style={{
+          display: "block",
+          width: "100%",
+          height: "40px",
+          marginBottom: "12px",
+          fontSize: "16px",
+          textAlign: "left",
+          color: "#333",
+          fontFamily: "Avenir, sans-serif",
+          fontWeight: "bold",
+          borderBottom: "1px solid #e0e0e0",
+          boxSizing: "border-box",
+          paddingBottom: "5px",
+          paddingLeft: "25px",
+          paddingTop: "5px",
+        }}
+      >
+        {data.label}
+      </strong>
+    </div>
+
+    <div
       style={{
-        display: "block",
-        marginBottom: "12px",
-        fontSize: "15px",
-        textAlign: "center",
-        color: "#555",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        paddingLeft: "15px",
+        paddingRight: "15px",
       }}
     >
-      {data.label}
-    </strong>
-    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       {data.maps.map((map, index) => (
         <div
           key={index}
           style={{
             display: "flex",
             justifyContent: "space-between",
+            fontFamily: "Avenir, sans-serif",
+            fontWeight: "bold",
             alignItems: "center",
-            padding: "6px 0",
+            padding: "12px 15px",
             borderBottom:
               index !== data.maps.length - 1 ? "1px solid #e0e0e0" : "none",
             position: "relative",
@@ -61,35 +85,42 @@ const MainNode = ({ data }) => (
         >
           <span
             style={{
-              fontSize: "13px",
+              fontSize: "12px",
+              fontFamily: "Avenir, sans-serif",
+              fontWeight: "bold",
               display: "flex",
               alignItems: "center",
-              color: "#333",
+              marginLeft: "5px",
+              color: "#282828",
+              textTransform: "uppercase",
+              letterSpacing: "0.02em",
             }}
           >
             {map}
             <Tooltip title={mapInfo[map]} arrow>
               <InfoOutlinedIcon
                 style={{
-                  marginLeft: "5px",
+                  marginLeft: "15px",
                   fontSize: "14px",
-                  color: "#888",
+                  color: "#DDDDDD",
                   cursor: "pointer",
                 }}
               />
             </Tooltip>
           </span>
+
           <Handle
             type="target"
             position={Position.Left}
             id={`handle-${index}`}
             style={{
-              background: "#40E0D0",
+              background: "#529D36",
+
               width: "8px",
               height: "8px",
               borderRadius: "50%",
               position: "absolute",
-              left: "-12px",
+              left: "2px",
               top: "50%",
               transform: "translateY(-50%)",
             }}
@@ -101,3 +132,5 @@ const MainNode = ({ data }) => (
 );
 
 export default MainNode;
+//v3 - All UI updated
+//v4 with Figma - UI done

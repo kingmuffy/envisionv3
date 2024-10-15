@@ -1,25 +1,29 @@
-import React, { useRef, useContext } from "react";
+/* eslint-disable no-unused-vars */
+"use client";
+import React, { useRef, useContext, useState } from "react";
 import PropTypes from "prop-types";
 import { Handle, Position } from "reactflow";
 import ImageIcon from "@mui/icons-material/Image";
 import { MapContext } from "../MapContext";
+import CloseIcon from "@mui/icons-material/Close";
 
-const MapNode = ({ id, data }) => {
+const MapNode = ({ id, data, onTriggerDelete }) => {
   const fileInputRef = useRef(null);
   const { updateConnectedMaps } = useContext(MapContext);
-
+  const [selected, setSelected] = useState(false);
   const handleImageClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
-
+  //
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         const thumbnail = reader.result;
+
         data.updateNodeData(id, file, thumbnail, file.name);
 
         if (data.mapType) {
@@ -30,20 +34,54 @@ const MapNode = ({ id, data }) => {
     }
   };
 
+  // green colour when selected
+  const handleNodeClick = () => {
+    setSelected(!selected);
+  };
+
+  //Delete
+  const handleDeleteClick = () => {
+    onTriggerDelete({ id, data });
+  };
+
   return (
     <div
+      onClick={handleNodeClick}
       style={{
         display: "flex",
         alignItems: "center",
-        backgroundColor: "#f9f9f9",
-        border: "1px solid #ddd",
+        backgroundColor: "#ffff",
+        border: selected ? "2px solid #529d36" : "2px solid #ccc",
         borderRadius: "8px",
         padding: "5px 10px",
-        fontFamily: "Barlow, sans-serif",
+
         width: "200px",
         position: "relative",
+        boxShadow: selected ? "0 0 10px rgba(0, 0, 0, 0.2)" : "none",
       }}
     >
+      {/* X Button */}
+      {selected && (
+        <div
+          style={{
+            position: "absolute",
+            top: "-12px",
+            right: "-12px",
+            backgroundColor: "#5AA447",
+            color: "#fff",
+            borderRadius: "50%",
+            width: "30px",
+            height: "30px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+          onClick={handleDeleteClick} // Trigger delete modal
+        >
+          <CloseIcon style={{ fontSize: "20px" }} />
+        </div>
+      )}
       <strong
         style={{
           flex: 1,
@@ -53,6 +91,8 @@ const MapNode = ({ id, data }) => {
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
+          fontWeight: "bold !important",
+          fontFamily: "Avenir, sans-serif",
         }}
       >
         {data.label || "Map Node"}
@@ -90,14 +130,14 @@ const MapNode = ({ id, data }) => {
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: "#40E0D0", borderRadius: "50%" }}
+        style={{ background: "#529D36", borderRadius: "50%" }}
       />
-      <Handle
+      {/* <Handle
         type="target"
         position={Position.Left}
         id={`handle-${id}`}
         style={{ background: "#40E0D0", borderRadius: "50%" }}
-      />
+      /> */}
     </div>
   );
 };
@@ -110,6 +150,9 @@ MapNode.propTypes = {
     thumbnail: PropTypes.string,
     mapType: PropTypes.string,
   }).isRequired,
+  onTriggerDelete: PropTypes.func.isRequired,
 };
 
 export default MapNode;
+//v5
+//v6 with figma design -

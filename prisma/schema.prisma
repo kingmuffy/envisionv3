@@ -36,6 +36,28 @@ model Project {
   isDefault   Boolean  @default(false) 
 
 }
+model Cameraproject{
+    id            String          @id @default(auto()) @map("_id") @db.ObjectId
+name String
+cameraSettings Camera[]
+createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  isDefault   Boolean  @default(false) 
+
+}
+
+model Camera {
+    id            String   @id @default(auto()) @map("_id") @db.ObjectId
+    cameraposition Json?
+    near Float
+    far  Float
+    fov  Float
+    targetPosition Json?
+     cameraprojectId String @map("cameraprojectId")  @db.ObjectId
+  cameraproject   Cameraproject  @relation(fields: [cameraprojectId], references: [id])
+
+
+}
 
 model LightSettings {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId

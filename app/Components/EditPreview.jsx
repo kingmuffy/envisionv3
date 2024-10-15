@@ -315,6 +315,30 @@ const Preview = ({ id }) => {
                   bias={0.0001}
                 />
               );
+            case "HEMISPHERE":
+              return (
+                <hemisphereLight
+                  key={light.id}
+                  intensity={light.intensity}
+                  skyColor={light.color || "#ffffff"}
+                  groundColor={light.groundColor || "#0000ff"}
+                />
+              );
+            case "SPOT":
+              return (
+                <spotLight
+                  key={light.id}
+                  intensity={light.intensity}
+                  position={[
+                    light.position?.x || 0,
+                    light.position?.y || 0,
+                    light.position?.z || 0,
+                  ]}
+                  angle={light.angle || 0.3}
+                  decay={light.decay || 2}
+                  castShadow={light.castShadow || false}
+                />
+              );
             default:
               return null;
           }
