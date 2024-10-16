@@ -143,6 +143,7 @@ const CameraSettings = () => {
     setRenameDialogOpen(false);
     handleMenuClose();
   };
+
   const handleDelete = () => {
     if (selectedCameraIndex !== null) {
       deleteCamera(selectedCameraIndex);

@@ -609,11 +609,17 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                     ? Boolean(materialName)
                     : selectedIcon === "sun"
                     ? Boolean(lightSceneName)
-                    : false,
+                    : selectedIcon === "camera"
+                    ? Boolean(cameraSceneName)
+                    : true,
                 style: {
                   position: "absolute",
                   top: (
-                    selectedIcon === "materials" ? materialName : lightSceneName
+                    selectedIcon === "materials"
+                      ? materialName
+                      : selectedIcon === lightSceneName
+                      ? lightSceneName
+                      : cameraSceneName
                   )
                     ? "-5px"
                     : "50%",

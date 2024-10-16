@@ -64,11 +64,36 @@ export const CameraProvider = ({ children }) => {
       setSnackbarOpen(true);
     }
   };
+  const duplicateCamera = (index) => {
+    const cameraToDuplicate = cameras[index];
+    const newCamera = {
+      ...cameraToDuplicate,
+      name: `${cameraToDuplicate.name} (Copy)`,
+    };
 
+    if (cameras.length < maxCameras) {
+      addCamera(newCamera);
+    } else {
+      alert("Camera limit reached! Cannot duplicate further.");
+    }
+  };
   const setActiveCamera = (index) => {
     setActiveCameraIndex(index);
   };
+  const renameCamera = (index, newName) => {
+    setCameras((prevCameras) => {
+      const updatedCameras = [...prevCameras];
+      updatedCameras[index] = { ...updatedCameras[index], name: newName };
+      return updatedCameras;
+    });
+  };
 
+  const deleteCamera = (index) => {
+    setCameras((prevCameras) => prevCameras.filter((_, i) => i !== index));
+    if (activeCameraIndex === index && cameras.length > 1) {
+      setActiveCamera(0);
+    }
+  };
   const updateActiveCameraSettings = (newSettings) => {
     setCameras((prevCameras) => {
       const updatedCameras = [...prevCameras];
@@ -81,7 +106,7 @@ export const CameraProvider = ({ children }) => {
   };
 
   const handleViewCamera = () => {
-    setUpdateTrigger((prev) => !prev); // Toggle the state to force re-render
+    setUpdateTrigger((prev) => !prev);
   };
 
   // Function to reset the update trigger
@@ -134,6 +159,9 @@ export const CameraProvider = ({ children }) => {
         resetUpdateTrigger, // Provide resetUpdateTrigger to the context
         setUpdateTrigger,
         updateTrigger,
+        deleteCamera,
+        renameCamera,
+        duplicateCamera,
       }}
     >
       {children}
