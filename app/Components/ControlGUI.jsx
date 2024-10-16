@@ -59,6 +59,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
 
   const { updateMaterialParams } = useContext(MapContext);
   //maps state
+  //state
   const [bumpScale, setBumpScale] = useState(0.0);
   const [normalX, setNormalX] = useState(1);
   const [normalY, setNormalY] = useState(1);
