@@ -1,13 +1,12 @@
 "use client";
-import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import React, { createContext, useState } from "react";
 import * as THREE from "three";
-
 export const MapContext = createContext();
 
 export const MapProvider = ({ children, initialMaterialParams = {} }) => {
   const [connectedMaps, setConnectedMaps] = useState({});
-  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [updateTrigger1, setUpdateTrigger1] = useState(0);
+
   const [materialParams, setMaterialParams] = useState({
     bumpScale: initialMaterialParams.bumpScale || 0.0,
     sheen: initialMaterialParams.sheen || true,
@@ -28,50 +27,31 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     envMapIntensity: initialMaterialParams.envMapIntensity || 0.0,
     scaleX: initialMaterialParams.scaleX || 1.0,
     scaleY: initialMaterialParams.scaleY || 1.0,
+    // sheen: initialMaterialParams.sheen || 0.0,
     anisotropy: initialMaterialParams.anisotropy || 0.0,
-    opacity: initialMaterialParams.opacity || 1.0,
   });
-
-  const [materialId, setMaterialId] = useState(null);
-
-  useEffect(() => {
-    const fetchMaterialParams = async () => {
-      if (!materialId) return;
-
-      try {
-        const response = await axios.get(`/api/maps?id=${materialId}`);
-        if (response.data.status === "success" && response.data.map) {
-          setMaterialParams((prev) => ({
-            ...prev,
-            ...response.data.map,
-          }));
-        } else {
-          console.error("Failed to fetch material parameters.");
-        }
-      } catch (error) {
-        console.error("Error fetching material parameters:", error);
-      }
-    };
-
-    fetchMaterialParams();
-  }, [materialId]);
 
   const updateConnectedMaps = (mapType, file) => {
     setConnectedMaps((prev) => ({
       ...prev,
       [mapType]: file,
     }));
-    setUpdateTrigger((prev) => prev + 1);
+    // Trigger an update
+    setUpdateTrigger1((prev) => prev + 1);
   };
 
+  // Function to disconnect a map by its type
   const disconnectMap = (mapType) => {
     setConnectedMaps((prev) => {
       const updatedMaps = { ...prev };
       delete updatedMaps[mapType];
+      return updatedMaps;
     });
-    setUpdateTrigger((prev) => prev + 1);
+    // Trigger an update after disconnection
+    setUpdateTrigger1((prev) => prev + 1);
   };
 
+  // Function to update material parameters in the state
   const updateMaterialParams = (param, value) => {
     setMaterialParams((prevParams) => {
       if (param === "sheenColor" || param === "emissiveColor") {
@@ -84,19 +64,21 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
         } else if (typeof value === "object" && value.r !== undefined) {
           return {
             ...prevParams,
-            [param]: { ...value },
+            [param]: { ...prevParams[param], ...value },
           };
         }
+      }
+      if (param === "normalScaleX" || param === "normalScaleY") {
+        return {
+          ...prevParams,
+          [param]: value,
+        };
       }
       return {
         ...prevParams,
         [param]: value,
       };
     });
-  };
-
-  const setInitialId = (id) => {
-    setMaterialId(id);
   };
 
   return (
@@ -107,11 +89,13 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
         disconnectMap,
         materialParams,
         updateMaterialParams,
-        updateTrigger,
-        setInitialId,
+        updateTrigger1,
       }}
     >
       {children}
     </MapContext.Provider>
   );
 };
+
+export default MapProvider;
+//v2 with figma design

@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable no-unused-vars */
 import React from "react";
 import { Box, Slider, Typography, TextField } from "@mui/material";
 
@@ -23,11 +25,13 @@ const CustomSlider = ({
     >
       <Typography
         sx={{
-          fontSize: "10px",
+          fontSize: "12px",
           fontWeight: "normal",
-          color: "#333",
+          color: "#282828",
           marginRight: "10px",
           marginLeft: "20px",
+          fontFamily: "Avenir, sans-serif",
+          textAlign: "left",
         }}
       >
         {label}
@@ -40,15 +44,26 @@ const CustomSlider = ({
         max={max}
         step={step}
         onChange={onChange}
+        track="inverted"
         sx={{
           width: "120px",
           height: "20px",
           padding: "0px",
           "& .MuiSlider-thumb": {
-            display: "none",
+            width: "1px",
+            height: "25px",
+            backgroundColor: "green",
+            "&:focus, &:hover, &:active, &:focus-visible": {
+              boxShadow: "none",
+              outline: "none",
+              border: "none",
+            },
+            "&:before": {
+              display: "none",
+            },
           },
           "& .MuiSlider-track": {
-            backgroundColor: "green",
+            backgroundColor: "transparent",
             height: "100%",
             borderRadius: "2px",
           },
@@ -61,25 +76,32 @@ const CustomSlider = ({
       />
 
       {/* TextField for manual value input */}
-      <TextField
-        value={typeof value === "number" ? value.toFixed(2) : ""}
-        onChange={onInputChange}
-        sx={{
-          width: "50px",
-          "& .MuiInputBase-root": {
-            height: "20px",
-            padding: "0px",
-            fontSize: "10px",
-            textAlign: "center",
-            backgroundColor: "#e0e0e0",
-          },
-          "& .MuiOutlinedInput-notchedOutline": {
-            border: "none",
-          },
-        }}
-      />
+      <Box sx={{ paddingLeft: "7px" }}>
+        <TextField
+          value={value.toFixed(2)}
+          onChange={onInputChange}
+          sx={{
+            width: "60px",
+            "& .MuiInputBase-root": {
+              height: "24px",
+              padding: "0px",
+              fontSize: "12px",
+              textAlign: "center",
+              color: "#529d36",
+              backgroundColor: "#ddd",
+              fontFamily: "Avenir, sans-serif",
+              fontWeight: "bold",
+            },
+            "& .MuiOutlinedInput-notchedOutline": {
+              border: "none",
+            },
+          }}
+        />
+      </Box>
     </Box>
   );
 };
 
 export default CustomSlider;
+
+//v2- Ui with figma

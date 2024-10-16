@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-"use client";
 import React, { useRef, useContext, useState } from "react";
 import PropTypes from "prop-types";
 import { Handle, Position } from "reactflow";
@@ -154,5 +153,4 @@ MapNode.propTypes = {
 };
 
 export default MapNode;
-//v5
-//v6 with figma design -
+//v2 with figma design
