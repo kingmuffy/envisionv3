@@ -1347,29 +1347,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                 alignItems: "center",
                 width: "100%",
               }}
-            >
-              <Button
-                variant="contained"
-                hidden
-                sx={{
-                  backgroundColor: "#529D36",
-                  color: "white",
-                  width: "190px",
-                  height: "30px",
-                  padding: 0,
-                  minWidth: 0,
-                  marginTop: "10px",
-                  textTransform: "none",
-                  borderRadius: "3px 0px 0px 0px",
-                  "&:hover": {
-                    backgroundColor: "darkgreen",
-                  },
-                }}
-                startIcon={<CheckIcon sx={{ fontSize: "12px" }} />}
-              >
-                Save Light Scene
-              </Button>
-            </Box>
+            ></Box>
           ) : selectedIcon === "sun" ? (
             <Button
               hidden
@@ -1401,27 +1379,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                 width: "100%",
               }}
             >
-              <Button
-                variant="contained"
-                hidden
-                sx={{
-                  backgroundColor: "#529D36",
-                  color: "white",
-                  width: "190px",
-                  height: "30px",
-                  padding: 0,
-                  minWidth: 0,
-                  marginTop: "10px",
-                  textTransform: "none",
-                  borderRadius: "3px 0px 0px 0px",
-                  "&:hover": {
-                    backgroundColor: "darkgreen",
-                  },
-                }}
-                startIcon={<CheckIcon sx={{ fontSize: "12px" }} />}
-              >
-                Save Camera
-              </Button>
+              <></>
             </Box>
           ) : null}
         </Box>
