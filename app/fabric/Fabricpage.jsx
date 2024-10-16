@@ -33,7 +33,6 @@ import {
   Alert,
   IconButton,
   Box,
-  CircularProgress, // Import CircularProgress
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
@@ -48,9 +47,6 @@ function FabricPage() {
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
 
   const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
-
-  // Loader state
-  const [isLoading, setIsLoading] = useState(false); // New loading state
 
   const mainNode = useMemo(
     () => ({
@@ -83,19 +79,13 @@ function FabricPage() {
     setNodes([mainNode]);
   }, [mainNode, setNodes]);
 
-  const addMapNode = useCallback(() => {
-    const mainNode = nodes.find((node) => node.id === "1");
-    const mainNodeX = mainNode?.position?.x || 250;
-    const mainNodeY = mainNode?.position?.y || 5;
-    const gap = 10;
+  // Inside FabricPage component
 
+  const addMapNode = useCallback(() => {
     const newMapNode = {
       id: `map-${nodes.length + 1}`,
       type: "mapNode",
-      position: {
-        x: mainNodeX - 220 - gap,
-        y: mainNodeY + 50,
-      },
+      position: { x: Math.random() * 150 + 150, y: Math.random() * 250 + 50 },
       data: {
         label: "Upload a map",
         thumbnail: null,
@@ -107,27 +97,34 @@ function FabricPage() {
               node.id === nodeId
                 ? {
                     ...node,
-                    data: {
-                      ...node.data,
-                      thumbnail,
-                      label: file.name,
-                      file,
-                    },
+                    data: { ...node.data, thumbnail, label: file.name, file },
                   }
                 : node
             )
           );
-
           const mapNode = nodes.find((node) => node.id === nodeId);
           if (mapNode && mapNode.data.mapType) {
             updateConnectedMaps(mapNode.data.mapType, file);
           }
         },
       },
-    };
+      // Add onTriggerDelete function to delete the node
+      onTriggerDelete: ({ id, data }) => {
+        if (data.mapType) {
+          disconnectMap(data.mapType); // Disconnect the map if it's linked
+        }
 
+        // Remove the node from the nodes array
+        setNodes((nds) => nds.filter((node) => node.id !== id));
+
+        // Remove any edges connected to the deleted node
+        setEdges((eds) =>
+          eds.filter((edge) => edge.source !== id && edge.target !== id)
+        );
+      },
+    };
     setNodes((nds) => [...nds, newMapNode]);
-  }, [nodes, setNodes, updateConnectedMaps]);
+  }, [nodes, setNodes, updateConnectedMaps, disconnectMap]);
 
   const onConnect = useCallback(
     (params) => {
@@ -161,18 +158,13 @@ function FabricPage() {
   );
 
   const onEdgeDoubleClick = useCallback(
-    async (event, edge) => {
+    (event, edge) => {
       event.stopPropagation();
       const mapNodeId = edge.source;
       const mapType = nodes.find((node) => node.id === mapNodeId)?.data
         ?.mapType;
 
       if (mapType) {
-        setIsLoading(true); // Set loading to true
-
-        // Simulate a disconnection delay (if needed)
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
@@ -181,7 +173,6 @@ function FabricPage() {
           )
         );
         disconnectMap(mapType);
-        setIsLoading(false); // Set loading to false
       }
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     },
@@ -190,12 +181,6 @@ function FabricPage() {
 
   const onNodeContextMenu = useCallback((event, node) => {
     event.preventDefault();
-    setSelectedNode(node);
-    setModalOpen(true);
-  }, []);
-
-  const triggerDeleteModal = useCallback((node) => {
-    console.log("Triggering delete modal for node:", node);
     setSelectedNode(node);
     setModalOpen(true);
   }, []);
@@ -234,13 +219,8 @@ function FabricPage() {
   const closeSnackbar = () => setSnackbarOpen(false);
 
   const nodeTypes = useMemo(
-    () => ({
-      mainNode: MainNode,
-      mapNode: (props) => (
-        <MapNode {...props} onTriggerDelete={triggerDeleteModal} />
-      ),
-    }),
-    [triggerDeleteModal]
+    () => ({ mainNode: MainNode, mapNode: MapNode }),
+    []
   );
 
   return (
@@ -301,9 +281,9 @@ function FabricPage() {
                 onEdgeDoubleClick={onEdgeDoubleClick}
                 fitView
                 defaultEdgeOptions={{
-                  style: { strokeWidth: 4, stroke: "#6EB057" },
+                  style: { strokeWidth: 4, stroke: "#333" },
                 }}
-                style={{ height: "100%", background: "#D5D7DB" }}
+                style={{ height: "100%" }}
               >
                 <Controls />
                 <Background />
@@ -312,20 +292,6 @@ function FabricPage() {
           </div>
         )}
       </Split>
-
-      {isLoading && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 1000,
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      )}
 
       <ControlGUI
         addMapNode={addMapNode}

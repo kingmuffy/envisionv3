@@ -20,6 +20,7 @@ import { CameraContext } from "../Components/CameraContext";
 import { Box, IconButton, Tooltip } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
+// Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
   const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
@@ -199,7 +200,7 @@ const Preview = () => {
   };
 
   const updateTextures = (material) => {
-    const currentMapTypes = Object.keys(connectedMaps);
+    const currentMapTypes = Object.keys(connectedMaps || []);
 
     currentMapTypes.forEach((mapType) => {
       const file = connectedMaps[mapType];
