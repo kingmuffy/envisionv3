@@ -85,7 +85,7 @@ const Preview = () => {
   const { cameras, activeCameraIndex } = useContext(CameraContext);
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
-  const defaultModelPath = "/Tetrad-Ruben-Midi-Standard.fbx";
+  const defaultModelPath = "/Tetrad-Knightsbridge-Snuggler-Leather.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = useRef(new TextureLoader()).current;
 
