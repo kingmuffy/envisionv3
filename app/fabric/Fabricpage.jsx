@@ -125,7 +125,12 @@ function FabricPage() {
     };
     setNodes((nds) => [...nds, newMapNode]);
   }, [nodes, setNodes, updateConnectedMaps, disconnectMap]);
-
+  // Trigger modal to confirm delete when the user clicks the "X" in MapNode
+  const triggerDeleteModal = useCallback((node) => {
+    console.log("Triggering delete modal for node:", node);
+    setSelectedNode(node);
+    setModalOpen(true);
+  }, []);
   const onConnect = useCallback(
     (params) => {
       const sourceNode = nodes.find((node) => node.id === params.source);
@@ -219,10 +224,14 @@ function FabricPage() {
   const closeSnackbar = () => setSnackbarOpen(false);
 
   const nodeTypes = useMemo(
-    () => ({ mainNode: MainNode, mapNode: MapNode }),
-    []
+    () => ({
+      mainNode: MainNode,
+      mapNode: (props) => (
+        <MapNode {...props} onTriggerDelete={triggerDeleteModal} />
+      ),
+    }),
+    [triggerDeleteModal]
   );
-
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
       {/* Custom Upload Icon */}
