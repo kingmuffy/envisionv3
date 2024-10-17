@@ -53,7 +53,11 @@ export const LightProvider = ({ children }) => {
   useEffect(() => {
     const fetchLightsFromAPI = async () => {
       try {
-        const response = await axios.get("/api/getdefault");
+        const response = await axios.get("/api/getdefault", {
+          headers: {
+            "Cache-Control": "no-cache", // Prevent client-side caching
+          },
+        });
         const apiProject = response.data;
         if (!apiProject || !apiProject.lightSettings) {
           console.error("No light settings found in the response.");
