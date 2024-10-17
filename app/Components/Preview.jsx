@@ -17,7 +17,15 @@ import { LightContext } from "./LightContext";
 import CustomCameraHelper from "./Helper/CustomCameraHelper";
 import { MapContext } from "../MapContext";
 import { CameraContext } from "../Components/CameraContext";
-import { Box, IconButton, Tooltip } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 // Component to handle camera updates based on active camera index
@@ -49,7 +57,8 @@ const CameraUpdater = () => {
 
   return null;
 };
-//model loading issue fix
+
+// Component to load and handle 3D model
 const PreviewScene = ({ model, setCurrentModel }) => {
   const { scene } = useThree();
 
@@ -78,17 +87,22 @@ const PreviewScene = ({ model, setCurrentModel }) => {
 
   return null;
 };
+
+// Main Preview Component
 const Preview = () => {
   const { lights } = useContext(LightContext);
   const { connectedMaps, materialParams, updateTrigger } =
     useContext(MapContext);
-  const { cameras, activeCameraIndex } = useContext(CameraContext);
+  const { cameras, activeCameraIndex, setActiveCamera, handleViewCamera } =
+    useContext(CameraContext);
+
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
   const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = useRef(new TextureLoader()).current;
 
+  // Load model when path changes
   useEffect(() => {
     const modelPath = uploadedModelPath || defaultModelPath;
 
@@ -97,10 +111,6 @@ const Preview = () => {
       loader.load(
         modelPath,
         (loadedModel) => {
-          // if (currentModel) {
-          //   disposeModel(currentModel);
-          // }
-
           loadedModel.traverse((child) => {
             if (child.isMesh) {
               const material = createMaterial();
@@ -121,6 +131,7 @@ const Preview = () => {
     loadModel();
   }, [uploadedModelPath]);
 
+  // Update material properties and textures when model changes
   useEffect(() => {
     if (currentModel) {
       currentModel.traverse((child) => {
@@ -132,24 +143,30 @@ const Preview = () => {
     }
   }, [currentModel, updateTrigger, connectedMaps, materialParams]);
 
-  const disposeModel = (model) => {
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.geometry?.dispose();
-
-        if (Array.isArray(child.material)) {
-          child.material.forEach((material) => material.dispose());
-        } else {
-          child.material?.dispose();
-        }
-
-        if (child.material?.map) {
-          child.material.map.dispose();
-        }
-      }
-    });
+  // Handle camera change from dropdown
+  const handleCameraSelectChange = (event) => {
+    const selectedIndex = event.target.value;
+    setActiveCamera(selectedIndex);
+    handleViewCamera(); // Trigger view update for selected camera
   };
 
+  // Handle file upload click
+  const handleFileUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setUploadedModelPath(url);
+    }
+  };
+
+  // Create new material based on parameters
   const createMaterial = () => {
     return new MeshPhysicalMaterial({
       color: 0xffffff,
@@ -158,6 +175,7 @@ const Preview = () => {
     });
   };
 
+  // Extract material properties from context
   const extractMaterialProperties = () => {
     const sheenColor = new Color(
       materialParams.sheenColor?.r || 0,
@@ -189,6 +207,7 @@ const Preview = () => {
     };
   };
 
+  // Update material properties and textures
   const updateMaterialProperties = (material) => {
     Object.assign(material, extractMaterialProperties());
     material.normalScale = new Vector2(
@@ -357,22 +376,9 @@ const Preview = () => {
     material.needsUpdate = true;
   };
 
-  const handleFileUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setUploadedModelPath(url);
-    }
-  };
-
   return (
     <>
+      {/* File Upload Icon */}
       <Box
         sx={{
           position: "fixed",
@@ -400,88 +406,142 @@ const Preview = () => {
         style={{ display: "none" }}
       />
 
-      <Canvas
-        shadows
-        style={{ backgroundColor: "#EFEFEF" }}
-        camera={{
-          position: [
-            cameras[activeCameraIndex]?.settings?.position.x || 0,
-            cameras[activeCameraIndex]?.settings?.position.y || 5,
-            cameras[activeCameraIndex]?.settings?.position.z || 10,
-          ],
-          fov: cameras[activeCameraIndex]?.settings?.fov || 50,
-          near: cameras[activeCameraIndex]?.settings?.near || 0.1,
-          far: cameras[activeCameraIndex]?.settings?.far || 1000,
-        }}
-      >
-        {lights.map((light) => {
-          switch (light.type.toUpperCase()) {
-            case "AMBIENT":
-              return (
-                <ambientLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  color={light.color || "#ffffff"}
-                />
-              );
-            case "DIRECTIONAL":
-              return (
-                <directionalLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  position={[
-                    light.position?.x || 0,
-                    light.position?.y || 0,
-                    light.position?.z || 0,
-                  ]}
-                  castShadow={light.castShadow || false}
-                  bias={0.0001}
-                />
-              );
-            case "HEMISPHERE":
-              return (
-                <hemisphereLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  skyColor={light.color || "#ffffff"}
-                  groundColor={light.groundColor || "#0000ff"}
-                />
-              );
-            case "SPOT":
-              return (
-                <spotLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  position={[
-                    light.position?.x || 0,
-                    light.position?.y || 0,
-                    light.position?.z || 0,
-                  ]}
-                  angle={light.angle || 0.3}
-                  decay={light.decay || 2}
-                  castShadow={light.castShadow || false}
-                />
-              );
-            default:
-              return null;
-          }
-        })}
-        {/* {currentModel && <primitive object={currentModel} />} */}
-        {currentModel && (
-          <PreviewScene
-            model={currentModel}
-            setCurrentModel={setCurrentModel}
-          />
-        )}
-        <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
-        <OrbitControls />
-        {cameras.map((camera, index) => (
-          <CustomCameraHelper key={index} cameraSettings={camera.settings} />
-        ))}
-        <CameraUpdater />
-      </Canvas>
+      {/* Main Canvas */}
+      <Box sx={{ position: "relative", height: "100%" }}>
+        <Canvas
+          shadows
+          style={{ height: "100%", backgroundColor: "#EFEFEF" }}
+          camera={{
+            position: [
+              cameras[activeCameraIndex]?.settings?.position.x || 0,
+              cameras[activeCameraIndex]?.settings?.position.y || 5,
+              cameras[activeCameraIndex]?.settings?.position.z || 10,
+            ],
+            fov: cameras[activeCameraIndex]?.settings?.fov || 50,
+            near: cameras[activeCameraIndex]?.settings?.near || 0.1,
+            far: cameras[activeCameraIndex]?.settings?.far || 1000,
+          }}
+        >
+          {lights.map((light) => {
+            switch (light.type.toUpperCase()) {
+              case "AMBIENT":
+                return (
+                  <ambientLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    color={light.color || "#ffffff"}
+                  />
+                );
+              case "DIRECTIONAL":
+                return (
+                  <directionalLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    position={[
+                      light.position?.x || 0,
+                      light.position?.y || 0,
+                      light.position?.z || 0,
+                    ]}
+                    castShadow={light.castShadow || false}
+                    bias={0.0001}
+                  />
+                );
+              case "HEMISPHERE":
+                return (
+                  <hemisphereLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    skyColor={light.color || "#ffffff"}
+                    groundColor={light.groundColor || "#0000ff"}
+                  />
+                );
+              case "SPOT":
+                return (
+                  <spotLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    position={[
+                      light.position?.x || 0,
+                      light.position?.y || 0,
+                      light.position?.z || 0,
+                    ]}
+                    angle={light.angle || 0.3}
+                    decay={light.decay || 2}
+                    castShadow={light.castShadow || false}
+                  />
+                );
+              default:
+                return null;
+            }
+          })}
+
+          {/* Render Model */}
+          {currentModel && (
+            <PreviewScene
+              model={currentModel}
+              setCurrentModel={setCurrentModel}
+            />
+          )}
+
+          <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
+          <OrbitControls />
+          {cameras.map((camera, index) => (
+            <CustomCameraHelper key={index} cameraSettings={camera.settings} />
+          ))}
+          <CameraUpdater />
+        </Canvas>
+
+        {/* Camera Select Dropdown - Positioned within the canvas */}
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <FormControl
+            variant="outlined"
+            sx={{
+              minWidth: 250,
+              backgroundColor: "#ffffff",
+              borderRadius: "25px",
+              boxShadow: "0px 0px 15px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <InputLabel>Select Camera View</InputLabel>
+            <Select
+              value={activeCameraIndex}
+              onChange={handleCameraSelectChange}
+              label="Select Camera View"
+              sx={{
+                "& .MuiOutlinedInput-notchedOutline": {
+                  border: "none",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  border: "none",
+                },
+                "& .MuiSelect-icon": {
+                  color: "gray",
+                },
+                "& .MuiSelect-select": {
+                  padding: "10px",
+                },
+              }}
+            >
+              {cameras.map((camera, index) => (
+                <MenuItem key={index} value={index}>
+                  {camera.name || `Camera ${index + 1}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Box>
     </>
   );
 };
-
 export default Preview;

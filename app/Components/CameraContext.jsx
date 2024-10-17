@@ -29,7 +29,7 @@ export const CameraProvider = ({ children }) => {
         const response = await axios.get("/api/getdefaultcamera");
         if (response.data.status === "success") {
           const apiCameras = response.data.cameraSettings.map((camera) => ({
-            ...camera,
+            name: camera.name,
             settings: {
               position: JSON.parse(camera.cameraposition || "{}"),
               target: JSON.parse(camera.targetPosition || "{}"),
@@ -117,6 +117,7 @@ export const CameraProvider = ({ children }) => {
   const saveCameraSettings = async (projectName) => {
     try {
       const formattedCameras = cameras.map((camera) => ({
+        name: camera.name, // Add the camera name to the data being sent
         cameraposition: camera.settings.position,
         near: camera.settings.near,
         far: camera.settings.far,

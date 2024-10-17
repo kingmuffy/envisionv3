@@ -48,6 +48,7 @@ createdAt     DateTime        @default(now())
 
 model Camera {
     id            String   @id @default(auto()) @map("_id") @db.ObjectId
+    name            String
     cameraposition Json?
     near Float
     far  Float

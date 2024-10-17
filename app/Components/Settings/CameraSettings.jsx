@@ -49,6 +49,7 @@ const CameraSettings = () => {
   const [openWarningSnackbar, setOpenWarningSnackbar] = useState(false);
   const [cameraType, setCameraType] = useState("perspective");
   const [cameraName, setCameraName] = useState("");
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [selectedCameraIndex, setSelectedCameraIndex] = useState(null);
@@ -87,6 +88,7 @@ const CameraSettings = () => {
     };
 
     addCamera(newCamera);
+    setSnackbarMessage("Camera added successfully!"); // Set success message
     setOpenSuccessSnackbar(true);
     setCameraName("");
   };
@@ -104,8 +106,8 @@ const CameraSettings = () => {
   const handleSetCamera = () => {
     saveCameraSettings();
     setCameraChanged(false);
-    setSetCameraSuccess(true);
-    // setOpenSuccessSnackbar(true);
+    // setSnackbarMessage("Camera settings saved successfully!");
+    // setSetCameraSuccess(true);
   };
   // Snackbar close handlers
   const handleSuccessSnackbarClose = () => {

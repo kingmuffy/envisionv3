@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import {
   Table,
   TableBody,
@@ -15,12 +15,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import CheckIcon from "@mui/icons-material/Check";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 
-const CameraList = ({
-  listData,
-  handleDelete,
-  handleMakeDefault,
-  handleSelect,
-}) => {
+const CameraList = ({ listData, handleDelete, handleMakeDefault }) => {
   return (
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 595 }} aria-label="camera scenes table">
@@ -71,6 +66,7 @@ const CameraList = ({
                   <DeleteIcon />
                 </IconButton>
 
+                {/* Make Default Button */}
                 <Button
                   variant="outlined"
                   size="small"
@@ -100,25 +96,6 @@ const CameraList = ({
                   disabled={item.isDefault}
                 >
                   {item.isDefault ? "Default" : "Make Default"}
-                </Button>
-
-                {/* Select Button */}
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => handleSelect(item.id)}
-                  startIcon={<RadioButtonUncheckedIcon />}
-                  sx={{
-                    textTransform: "none",
-                    width: "100px",
-                    backgroundColor: "#4CAF50",
-                    color: "white",
-                    "&:hover": {
-                      backgroundColor: "#388E3C",
-                    },
-                  }}
-                >
-                  Select
                 </Button>
               </TableCell>
             </TableRow>

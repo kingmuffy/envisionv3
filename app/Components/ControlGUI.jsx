@@ -240,7 +240,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
       } else if (selectedIcon === "camera") {
         const response = await saveCameraSettings(cameraSceneName); // Expect the return from saveCameraSettings
         if (response.status === "success") {
-          setSnackbarMessage("Camera settings saved successfully!");
+          console.log("Camera settings saved successfully!");
         } else {
           setSnackbarMessage("Failed to save camera settings.");
         }

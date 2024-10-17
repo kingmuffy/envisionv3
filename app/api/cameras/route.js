@@ -15,6 +15,7 @@ export async function POST(request) {
 
     // Sanitize camera settings data
     const sanitizedSettings = cameraSettings.map((camera) => ({
+      name: camera.name,
       cameraposition: camera.cameraposition
         ? JSON.stringify(camera.cameraposition)
         : null,
