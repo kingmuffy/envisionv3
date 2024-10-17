@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import { revalidate } from "../cameralist/route";
 
 const prisma = new PrismaClient();
+revalidate = 0;
 
 export async function POST(req) {
   try {
