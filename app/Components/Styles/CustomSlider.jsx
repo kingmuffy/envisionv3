@@ -1,5 +1,3 @@
-/* eslint-disable react/prop-types */
-/* eslint-disable no-unused-vars */
 import React from "react";
 import { Box, Slider, Typography, TextField } from "@mui/material";
 
@@ -12,7 +10,6 @@ const CustomSlider = ({
   step = 0.01,
   onInputChange,
 }) => {
-  // Format the value to 2 decimal places if it's a valid number
   const formattedValue =
     typeof value === "number" && !isNaN(value) ? value.toFixed(2) : "0.00";
 
