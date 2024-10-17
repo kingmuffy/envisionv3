@@ -1480,6 +1480,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
               borderRadius: "50%",
               backgroundColor: "transparent",
             }}
+            onClick={() => window.location.reload()}
           >
             <CachedIcon sx={{ fontSize: "14px" }} />
           </IconButton>
