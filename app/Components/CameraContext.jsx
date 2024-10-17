@@ -26,7 +26,11 @@ export const CameraProvider = ({ children }) => {
   useEffect(() => {
     const fetchDefaultCamera = async () => {
       try {
-        const response = await axios.get("/api/getdefaultcamera");
+        const response = await axios.get("/api/getdefaultcamera", {
+          headers: {
+            "Cache-Control": "no-cache",
+          },
+        });
         if (response.data.status === "success") {
           const apiCameras = response.data.cameraSettings.map((camera) => ({
             name: camera.name,
