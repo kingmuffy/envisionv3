@@ -5,10 +5,9 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    // Find the default camera project
     const defaultCameraProject = await prisma.cameraproject.findFirst({
       where: { isDefault: true },
-      include: { cameraSettings: true }, // Include associated camera settings
+      include: { cameraSettings: true },
     });
 
     console.log("Fetched default camera project:", defaultCameraProject);

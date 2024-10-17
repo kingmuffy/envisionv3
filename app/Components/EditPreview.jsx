@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import {
@@ -14,8 +14,17 @@ import {
 } from "three";
 import { LightContext } from "./LightContext";
 import { MapContext } from "../EditContext";
-import { Box, IconButton, Tooltip } from "@mui/material";
+import { CameraContext } from "./CameraContext";
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+} from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import CustomCameraHelper from "./Helper/CustomCameraHelper";
 import axios from "axios";
 
 const mapTypeMappings = {
@@ -33,7 +42,11 @@ const mapTypeMappings = {
   sheenMapUrl: "SHEEN",
 };
 
+// Component to handle camera updates based on active camera index
+
 const Preview = ({ id }) => {
+  const { cameras, activeCameraIndex, setActiveCamera, handleViewCamera } =
+    useContext(CameraContext);
   const { lights } = useContext(LightContext);
   const { materialParams, updateTrigger } = useContext(MapContext);
   const [connectedMaps, setConnectedMaps] = useState({});
@@ -42,6 +55,7 @@ const Preview = ({ id }) => {
   const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = new TextureLoader();
+  const orbitControlsRef = useRef();
 
   useEffect(() => {
     const fetchMaps = async (id) => {
@@ -65,6 +79,35 @@ const Preview = ({ id }) => {
       fetchMaps(id);
     }
   }, [id, updateTrigger]);
+
+  const CameraUpdater = () => {
+    const { camera } = useThree();
+    const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
+      useContext(CameraContext);
+
+    useEffect(() => {
+      if (updateTrigger && cameras.length > 0) {
+        const activeCameraSettings = cameras[activeCameraIndex].settings;
+        camera.position.set(
+          activeCameraSettings.position.x,
+          activeCameraSettings.position.y,
+          activeCameraSettings.position.z
+        );
+        camera.lookAt(
+          activeCameraSettings.target.x,
+          activeCameraSettings.target.y,
+          activeCameraSettings.target.z
+        );
+        camera.near = activeCameraSettings.near;
+        camera.far = activeCameraSettings.far;
+        camera.fov = activeCameraSettings.fov;
+        camera.updateProjectionMatrix();
+        resetUpdateTrigger();
+      }
+    }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
+
+    return null;
+  };
 
   useEffect(() => {
     const modelPath = uploadedModelPath || defaultModelPath;
@@ -93,6 +136,30 @@ const Preview = ({ id }) => {
 
     loadModel();
   }, [uploadedModelPath]);
+  // Update OrbitControls when active camera changes
+  useEffect(() => {
+    if (orbitControlsRef.current && cameras.length > 0) {
+      const activeCameraSettings = cameras[activeCameraIndex].settings;
+      orbitControlsRef.current.target.set(
+        activeCameraSettings.target.x,
+        activeCameraSettings.target.y,
+        activeCameraSettings.target.z
+      );
+      orbitControlsRef.current.object.position.set(
+        activeCameraSettings.position.x,
+        activeCameraSettings.position.y,
+        activeCameraSettings.position.z
+      );
+      orbitControlsRef.current.update();
+    }
+  }, [activeCameraIndex, cameras]);
+
+  // Handle camera change from dropdown
+  const handleCameraSelectChange = (event) => {
+    const selectedIndex = event.target.value;
+    setActiveCamera(selectedIndex);
+    handleViewCamera(); // Trigger view update for selected camera
+  };
 
   useEffect(() => {
     if (currentModel) {
@@ -289,64 +356,148 @@ const Preview = ({ id }) => {
         onChange={handleFileUpload}
         style={{ display: "none" }}
       />
-
-      <Canvas shadows style={{ backgroundColor: "#EFEFEF" }}>
-        {lights.map((light) => {
-          switch (light.type.toUpperCase()) {
-            case "AMBIENT":
-              return (
-                <ambientLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  color={light.color || "#ffffff"}
-                />
-              );
-            case "DIRECTIONAL":
-              return (
-                <directionalLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  position={[
-                    light.position?.x || 0,
-                    light.position?.y || 0,
-                    light.position?.z || 0,
-                  ]}
-                  castShadow={light.castShadow || false}
-                  bias={0.0001}
-                />
-              );
-            case "HEMISPHERE":
-              return (
-                <hemisphereLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  skyColor={light.color || "#ffffff"}
-                  groundColor={light.groundColor || "#0000ff"}
-                />
-              );
-            case "SPOT":
-              return (
-                <spotLight
-                  key={light.id}
-                  intensity={light.intensity}
-                  position={[
-                    light.position?.x || 0,
-                    light.position?.y || 0,
-                    light.position?.z || 0,
-                  ]}
-                  angle={light.angle || 0.3}
-                  decay={light.decay || 2}
-                  castShadow={light.castShadow || false}
-                />
-              );
-            default:
-              return null;
-          }
-        })}
-        {currentModel && <primitive object={currentModel} />}
-        <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
-        <OrbitControls />
-      </Canvas>
+      <Box sx={{ position: "relative", height: "100%" }}>
+        <Canvas shadows style={{ backgroundColor: "#EFEFEF" }}>
+          {lights.map((light) => {
+            switch (light.type.toUpperCase()) {
+              case "AMBIENT":
+                return (
+                  <ambientLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    color={light.color || "#ffffff"}
+                  />
+                );
+              case "DIRECTIONAL":
+                return (
+                  <directionalLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    position={[
+                      light.position?.x || 0,
+                      light.position?.y || 0,
+                      light.position?.z || 0,
+                    ]}
+                    castShadow={light.castShadow || false}
+                    bias={0.0001}
+                  />
+                );
+              case "HEMISPHERE":
+                return (
+                  <hemisphereLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    skyColor={light.color || "#ffffff"}
+                    // groundColor={light.groundColor || "#0000ff"}
+                  />
+                );
+              case "SPOT":
+                return (
+                  <spotLight
+                    key={light.id}
+                    intensity={light.intensity}
+                    position={[
+                      light.position?.x || 0,
+                      light.position?.y || 0,
+                      light.position?.z || 0,
+                    ]}
+                    angle={light.angle || 0.3}
+                    decay={light.decay || 2}
+                    castShadow={light.castShadow || false}
+                  />
+                );
+              default:
+                return null;
+            }
+          })}
+          {currentModel && <primitive object={currentModel} />}
+          <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
+          <OrbitControls ref={orbitControlsRef} />
+          {cameras.map((camera, index) => (
+            <CustomCameraHelper key={index} cameraSettings={camera.settings} />
+          ))}{" "}
+          <CameraUpdater />
+        </Canvas>
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <FormControl
+            variant="outlined"
+            sx={{
+              minWidth: 250,
+              backgroundColor: "#ffffff",
+              borderRadius: "0px",
+              boxShadow: "0px 0px 15px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <Select
+              displayEmpty
+              value={activeCameraIndex === -1 ? "" : activeCameraIndex}
+              onChange={handleCameraSelectChange}
+              sx={{
+                backgroundColor: "transparent",
+                fontFamily: "Avenir",
+                fontSize: "11px",
+                fontWeight: 400,
+                lineHeight: "35px",
+                letterSpacing: "0.02em",
+                textAlign: "left",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#529d36",
+                  borderWidth: "1px",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#529d36",
+                },
+                "& .MuiSelect-icon": {
+                  color: "gray",
+                },
+                "& .MuiSelect-select": {
+                  padding: "10px",
+                },
+              }}
+              inputProps={{
+                "aria-label": "Select Camera View",
+                style: {
+                  fontFamily: "Avenir",
+                  fontSize: "11px",
+                  fontWeight: 400,
+                  lineHeight: "35px",
+                  letterSpacing: "0.02em",
+                  textAlign: "left",
+                },
+              }}
+            >
+              <MenuItem value="" disabled>
+                <span
+                  style={{
+                    fontStyle: "normal",
+                    fontFamily: "Avenir",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    color: "#333333",
+                  }}
+                >
+                  Select Camera View
+                </span>
+              </MenuItem>
+              {cameras.map((camera, index) => (
+                <MenuItem key={index} value={index}>
+                  {camera.name || `Camera ${index + 1}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      </Box>
     </>
   );
 };

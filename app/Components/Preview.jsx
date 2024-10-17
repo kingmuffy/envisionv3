@@ -102,6 +102,9 @@ const Preview = () => {
   const fileInputRef = useRef(null);
   const textureLoader = useRef(new TextureLoader()).current;
 
+  // Reference for OrbitControls
+  const orbitControlsRef = useRef();
+
   // Load model when path changes
   useEffect(() => {
     const modelPath = uploadedModelPath || defaultModelPath;
@@ -142,6 +145,23 @@ const Preview = () => {
       });
     }
   }, [currentModel, updateTrigger, connectedMaps, materialParams]);
+  // Update OrbitControls when active camera changes
+  useEffect(() => {
+    if (orbitControlsRef.current && cameras.length > 0) {
+      const activeCameraSettings = cameras[activeCameraIndex].settings;
+      orbitControlsRef.current.target.set(
+        activeCameraSettings.target.x,
+        activeCameraSettings.target.y,
+        activeCameraSettings.target.z
+      );
+      orbitControlsRef.current.object.position.set(
+        activeCameraSettings.position.x,
+        activeCameraSettings.position.y,
+        activeCameraSettings.position.z
+      );
+      orbitControlsRef.current.update();
+    }
+  }, [activeCameraIndex, cameras]);
 
   // Handle camera change from dropdown
   const handleCameraSelectChange = (event) => {
@@ -484,7 +504,7 @@ const Preview = () => {
           )}
 
           <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
-          <OrbitControls />
+          <OrbitControls ref={orbitControlsRef} />
           {cameras.map((camera, index) => (
             <CustomCameraHelper key={index} cameraSettings={camera.settings} />
           ))}

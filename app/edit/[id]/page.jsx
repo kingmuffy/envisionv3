@@ -24,17 +24,7 @@ import MainNode from "../../Components/MainNode";
 import MapNode from "../../Components/EditMapNode";
 import ControlGUI from "../../Components/EditControl";
 import { MapContext } from "../../EditContext";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Snackbar,
-  Alert,
-  IconButton,
-  Box,
-} from "@mui/material";
+import { Snackbar, Alert, IconButton, Box } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import axios from "axios";
 
@@ -43,9 +33,8 @@ function FabricPage({ params }) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState(""); // Track custom messages for Snackbar
   const [currentModel, setCurrentModel] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -57,7 +46,7 @@ function FabricPage({ params }) {
     throw new Error("MapContext must be used within a MapProvider");
   }
 
-  const { updateConnectedMaps, disconnectMap, setInitialId } = mapContext;
+  const { updateConnectedMaps, setInitialId } = mapContext;
 
   // Callback to receive currentModel from Preview
   const handleModelLoaded = useCallback((model) => {
@@ -180,47 +169,17 @@ function FabricPage({ params }) {
   }, [mainNode]);
 
   const addMapNode = useCallback(() => {
-    const newMapNode = {
-      id: `map-${nodes.length + 1}`,
-      type: "mapNode",
-      position: { x: Math.random() * 150 + 150, y: Math.random() * 250 + 50 },
-      data: {
-        label: "Upload a map",
-        thumbnail: null,
-        mapType: null,
-        file: null,
-        updateNodeData: (nodeId, file, thumbnail) => {
-          setNodes((nds) =>
-            nds.map((node) =>
-              node.id === nodeId
-                ? {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      thumbnail,
-                      label: file.name,
-                      file,
-                    },
-                  }
-                : node
-            )
-          );
-
-          const mapNode = nodes.find((node) => node.id === nodeId);
-          if (mapNode && mapNode.data.mapType) {
-            updateConnectedMaps(mapNode.data.mapType, file);
-          }
-        },
-      },
-    };
-
-    setNodes((nds) => [...nds, newMapNode]);
-  }, [nodes, setNodes, updateConnectedMaps]);
+    setSnackbarMessage(
+      "You are currently in editing mode. You can only reassign a map, but not create new nodes."
+    );
+    setSnackbarOpen(true);
+  }, []);
 
   const onConnect = useCallback(
     (params) => {
       const sourceNode = nodes.find((node) => node.id === params.source);
       if (!sourceNode || !sourceNode.data.file) {
+        setSnackbarMessage("You must upload a map before connecting nodes.");
         setSnackbarOpen(true);
         return;
       }
@@ -255,58 +214,21 @@ function FabricPage({ params }) {
     [nodes, setNodes, setEdges, updateConnectedMaps]
   );
 
-  const onEdgeDoubleClick = useCallback(
-    (event, edge) => {
-      event.stopPropagation();
-      const mapNodeId = edge.source;
-      const mapType = nodes.find((node) => node.id === mapNodeId)?.data
-        ?.mapType;
+  const onEdgeDoubleClick = useCallback((event) => {
+    event.stopPropagation();
+    setSnackbarMessage(
+      "You are currently in editing mode. Disconnecting edges is not allowed."
+    );
+    setSnackbarOpen(true);
+  }, []);
 
-      if (mapType) {
-        setNodes((nds) =>
-          nds.map((node) =>
-            node.id === mapNodeId
-              ? { ...node, data: { ...node.data, mapType: null } }
-              : node
-          )
-        );
-        disconnectMap(mapType);
-      }
+  const onEdgesDelete = useCallback(() => {
+    setSnackbarMessage(
+      "You are currently in editing mode. Deleting edges is not allowed."
+    );
+    setSnackbarOpen(true);
+  }, []);
 
-      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-    },
-    [nodes, disconnectMap, setNodes, setEdges]
-  );
-
-  const onEdgeRemove = useCallback(
-    (edges) => {
-      edges.forEach((edge) => {
-        const mapType = edge.data?.mapType;
-        if (mapType) {
-          disconnectMap(mapType);
-        }
-      });
-    },
-    [disconnectMap]
-  );
-
-  const confirmDeleteNode = useCallback(() => {
-    if (selectedNode) {
-      const { id, data } = selectedNode;
-
-      if (data.mapType) {
-        disconnectMap(data.mapType);
-      }
-
-      setNodes((nds) => nds.filter((node) => node.id !== id));
-      setEdges((eds) =>
-        eds.filter((edge) => edge.source !== id && edge.target !== id)
-      );
-    }
-    setModalOpen(false);
-  }, [selectedNode, setNodes, setEdges, disconnectMap]);
-
-  const closeModal = () => setModalOpen(false);
   const closeSnackbar = () => setSnackbarOpen(false);
 
   const handleFileUploadClick = () => {
@@ -378,11 +300,13 @@ function FabricPage({ params }) {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onEdgesDelete={onEdgeRemove}
-              onNodeContextMenu={(event, node) => {
+              onEdgesDelete={onEdgesDelete}
+              onNodeContextMenu={(event) => {
                 event.preventDefault();
-                setSelectedNode(node);
-                setModalOpen(true);
+                setSnackbarMessage(
+                  "You are currently in editing mode. Deleting nodes is not allowed."
+                );
+                setSnackbarOpen(true);
               }}
               onEdgeDoubleClick={onEdgeDoubleClick}
               fitView
@@ -402,21 +326,6 @@ function FabricPage({ params }) {
         style={{ height: "100vh", position: "absolute", top: 0 }}
       />
 
-      <Dialog open={modalOpen} onClose={closeModal}>
-        <DialogTitle>Delete Node</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this map node?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeModal} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmDeleteNode} color="secondary">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
@@ -427,7 +336,7 @@ function FabricPage({ params }) {
           severity="warning"
           sx={{ width: "100%" }}
         >
-          You must upload a map before connecting nodes.
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </div>
