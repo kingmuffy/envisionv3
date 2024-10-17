@@ -104,7 +104,7 @@ const CameraSettings = () => {
   };
 
   const handleSetCamera = () => {
-    saveCameraSettings();
+    // saveCameraSettings();
     setCameraChanged(false);
     // setSnackbarMessage("Camera settings saved successfully!");
     // setSetCameraSuccess(true);
@@ -172,9 +172,9 @@ const CameraSettings = () => {
   // Handlers for sliders
   const handlePositionChange = (axis, newValue) => {
     setCameraChanged(true);
+
     updateActiveCameraSettings({
       position: {
-        ...cameras[0]?.settings.position,
         [axis]: newValue,
       },
     });
@@ -184,7 +184,6 @@ const CameraSettings = () => {
     setCameraChanged(true);
     updateActiveCameraSettings({
       target: {
-        ...cameras[0]?.settings.target,
         [axis]: newValue,
       },
     });
@@ -632,7 +631,7 @@ const CameraSettings = () => {
         </FormControl>
 
         <TextField
-          variant="outlined" //
+          variant="outlined"
           className="custom-text-field"
           label="Camera Name"
           value={cameraName}

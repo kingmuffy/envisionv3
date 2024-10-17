@@ -452,7 +452,7 @@ const Preview = () => {
                     key={light.id}
                     intensity={light.intensity}
                     skyColor={light.color || "#ffffff"}
-                    groundColor={light.groundColor || "#0000ff"}
+                    // groundColor={light.groundColor || "#0000ff"}
                   />
                 );
               case "SPOT":
@@ -491,7 +491,6 @@ const Preview = () => {
           <CameraUpdater />
         </Canvas>
 
-        {/* Camera Select Dropdown - Positioned within the canvas */}
         <Box
           sx={{
             position: "absolute",
@@ -508,21 +507,28 @@ const Preview = () => {
             sx={{
               minWidth: 250,
               backgroundColor: "#ffffff",
-              borderRadius: "25px",
+              borderRadius: "0px",
               boxShadow: "0px 0px 15px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <InputLabel>Select Camera View</InputLabel>
             <Select
-              value={activeCameraIndex}
+              displayEmpty
+              value={activeCameraIndex === -1 ? "" : activeCameraIndex}
               onChange={handleCameraSelectChange}
-              label="Select Camera View"
               sx={{
+                backgroundColor: "transparent",
+                fontFamily: "Avenir",
+                fontSize: "11px",
+                fontWeight: 400,
+                lineHeight: "35px",
+                letterSpacing: "0.02em",
+                textAlign: "left",
                 "& .MuiOutlinedInput-notchedOutline": {
-                  border: "none",
+                  borderColor: "#529d36",
+                  borderWidth: "1px",
                 },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  border: "none",
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#529d36",
                 },
                 "& .MuiSelect-icon": {
                   color: "gray",
@@ -531,7 +537,31 @@ const Preview = () => {
                   padding: "10px",
                 },
               }}
+              inputProps={{
+                "aria-label": "Select Camera View",
+                style: {
+                  fontFamily: "Avenir",
+                  fontSize: "11px",
+                  fontWeight: 400,
+                  lineHeight: "35px",
+                  letterSpacing: "0.02em",
+                  textAlign: "left",
+                },
+              }}
             >
+              <MenuItem value="" disabled>
+                <span
+                  style={{
+                    fontStyle: "normal",
+                    fontFamily: "Avenir",
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    color: "#333333",
+                  }}
+                >
+                  Select Camera View
+                </span>
+              </MenuItem>
               {cameras.map((camera, index) => (
                 <MenuItem key={index} value={index}>
                   {camera.name || `Camera ${index + 1}`}

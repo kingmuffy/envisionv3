@@ -101,9 +101,23 @@ export const CameraProvider = ({ children }) => {
   const updateActiveCameraSettings = (newSettings) => {
     setCameras((prevCameras) => {
       const updatedCameras = [...prevCameras];
+      const currentCamera = updatedCameras[activeCameraIndex];
+
+      if (!currentCamera) {
+        return prevCameras;
+      }
+
       updatedCameras[activeCameraIndex].settings = {
-        ...updatedCameras[activeCameraIndex].settings,
+        ...currentCamera.settings,
         ...newSettings,
+        position: {
+          ...currentCamera.settings.position,
+          ...(newSettings.position || {}),
+        },
+        target: {
+          ...currentCamera.settings.target,
+          ...(newSettings.target || {}),
+        },
       };
       return updatedCameras;
     });

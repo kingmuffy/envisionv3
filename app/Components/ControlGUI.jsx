@@ -238,18 +238,18 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         await handleSaveLights(lightSceneName);
         setSnackbarMessage("Light settings saved successfully!");
       } else if (selectedIcon === "camera") {
-        const response = await saveCameraSettings(cameraSceneName); // Expect the return from saveCameraSettings
+        const response = await saveCameraSettings(cameraSceneName);
         if (response.status === "success") {
           console.log("Camera settings saved successfully!");
         } else {
-          setSnackbarMessage("Failed to save camera settings.");
+          console.log("Failed to save camera settings.");
         }
       }
     } catch (error) {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
     } finally {
-      setSnackbarOpen(true); // Show snackbar regardless of success or error
+      setSnackbarOpen(true);
     }
   };
 
