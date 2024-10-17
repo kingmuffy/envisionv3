@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+export const revalidate = 1;
 export async function GET() {
   try {
     const defaultProject = await prisma.project.findFirst({
