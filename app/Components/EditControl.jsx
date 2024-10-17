@@ -57,8 +57,6 @@ const ControlGUI = ({ addMapNode, id }) => {
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [lightSceneName, setLightSceneName] = useState("");
 
-  // Initialize material parameters from context to reflect the initial values in the UI sliders.
-  //   const [bumpScale, setBumpScale] = useState(materialParams.bumpScale || 0.0);
   const [normalX, setNormalX] = useState(materialParams.normalScaleX || 1);
   const [normalY, setNormalY] = useState(materialParams.normalScaleY || 1);
   const [scaleX, setScaleX] = useState(materialParams.scaleX || 1);

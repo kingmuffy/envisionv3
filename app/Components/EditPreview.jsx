@@ -39,7 +39,7 @@ const Preview = ({ id }) => {
   const [connectedMaps, setConnectedMaps] = useState({});
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
-  const defaultModelPath = "/Tetrad-Ruben-Midi-Standard.fbx";
+  const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = new TextureLoader();
 

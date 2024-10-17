@@ -12,6 +12,10 @@ const CustomSlider = ({
   step = 0.01,
   onInputChange,
 }) => {
+  // Format the value to 2 decimal places if it's a valid number
+  const formattedValue =
+    typeof value === "number" && !isNaN(value) ? value.toFixed(2) : "0.00";
+
   return (
     <Box
       sx={{
@@ -78,7 +82,7 @@ const CustomSlider = ({
       {/* TextField for manual value input */}
       <Box sx={{ paddingLeft: "7px" }}>
         <TextField
-          value={value.toFixed(2)}
+          value={formattedValue} // Using formatted value for 2 decimal places
           onChange={onInputChange}
           sx={{
             width: "60px",
@@ -103,5 +107,3 @@ const CustomSlider = ({
 };
 
 export default CustomSlider;
-
-//v2- Ui with figma

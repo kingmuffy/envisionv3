@@ -18,7 +18,7 @@ const MaterialList = ({ listData, handleEditRedirect }) => {
               backgroundColor: "#f0f0f0",
             },
           }}
-          // onClick={() => handleEditRedirect(item.id)}
+          onClick={() => handleEditRedirect(item.id)}
         >
           {item.diffuseMapUrl ? (
             <img
