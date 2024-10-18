@@ -10,6 +10,7 @@ import {
   Button,
   Typography,
   Paper,
+  Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CheckIcon from "@mui/icons-material/Check";
@@ -23,7 +24,7 @@ const LightList = ({
 }) => {
   return (
     <TableContainer component={Paper}>
-      <Table sx={{ minWidth: 595 }} aria-label="light scenes table">
+      <Table sx={{ minWidth: 550 }} aria-label="light scenes table">
         <TableHead>
           <TableRow>
             <TableCell>
@@ -54,19 +55,33 @@ const LightList = ({
               }}
             >
               <TableCell component="th" scope="row">
-                {item.name || "Unnamed Scene"}
+                {/* Truncated Name with Tooltip */}
+                <Tooltip title={item.name || "Unnamed Scene"} arrow>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "150px", // Set max width to control truncation
+                    }}
+                  >
+                    {item.name || "Unnamed Scene"}
+                  </Typography>
+                </Tooltip>
               </TableCell>
               <TableCell>
                 {new Date(item.createdAt).toLocaleDateString()}
               </TableCell>
               <TableCell>
-                {/* Delete Button */}
+                {/* Delete Button, Disabled if Default */}
                 <IconButton
                   onClick={() => handleDelete(item.id)}
                   aria-label="delete"
                   sx={{
                     color: "red",
                   }}
+                  disabled={item.isDefault}
                 >
                   <DeleteIcon />
                 </IconButton>
@@ -85,7 +100,7 @@ const LightList = ({
                   sx={{
                     marginRight: "10px",
                     textTransform: "none",
-                    width: "130px",
+                    width: "80px",
                     color: item.isDefault ? "#ffffff" : "grey",
                     borderColor: item.isDefault ? "#B0B0B0" : "grey",
                     backgroundColor: item.isDefault ? "#B0B0B0" : "transparent",
