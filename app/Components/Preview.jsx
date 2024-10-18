@@ -503,7 +503,7 @@ const Preview = () => {
             />
           )}
 
-          <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
+          <gridHelper args={[1000, 1000, "#ffffff", "#555555"]} />
           <OrbitControls ref={orbitControlsRef} />
           {cameras.map((camera, index) => (
             <CustomCameraHelper key={index} cameraSettings={camera.settings} />
