@@ -141,6 +141,7 @@ const LightSettings = () => {
     setSnackbarOpen(false);
   };
 
+  // Render Position Controls for Directional and Spot Lights
   const renderPositionControls = (light) => (
     <Box
       sx={{
@@ -153,13 +154,10 @@ const LightSettings = () => {
     >
       <Typography
         sx={{
-          fontSize: "12px",
+          fontSize: "10px",
           fontWeight: "normal",
-          color: "#282828",
-          marginRight: "10px",
           marginLeft: "20px",
-          fontFamily: "Avenir, sans-serif",
-          textAlign: "left",
+          color: "#333",
         }}
       >
         Position
@@ -173,38 +171,20 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield",
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
-          width: "80px",
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
-            padding: "0px 5px",
-            fontSize: "12px",
+            height: "25px",
+            padding: "0px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
           },
         }}
       />
-
       <TextField
         value={light.position?.y ?? 0}
         onChange={(e) =>
@@ -214,31 +194,14 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield",
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          width: "80px",
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
+            height: "25px",
             padding: "0px",
-            fontSize: "12px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
@@ -254,31 +217,14 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield",
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          width: "80px",
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
+            height: "25px",
             padding: "0px",
-            fontSize: "12px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
@@ -288,6 +234,7 @@ const LightSettings = () => {
     </Box>
   );
 
+  // Render Target Controls for Directional and Spot Lights
   const renderTargetControls = (light) => (
     <Box
       sx={{
@@ -300,13 +247,10 @@ const LightSettings = () => {
     >
       <Typography
         sx={{
-          fontSize: "12px",
+          fontSize: "10px",
           fontWeight: "normal",
-          color: "#282828",
-          marginRight: "10px",
           marginLeft: "20px",
-          fontFamily: "Avenir, sans-serif",
-          textAlign: "left",
+          color: "#333",
         }}
       >
         Target
@@ -320,31 +264,14 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield",
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          width: "80px",
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
+            height: "25px",
             padding: "0px",
-            fontSize: "12px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
@@ -360,31 +287,14 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield", // For Firefox
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          width: "80px",
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
+            height: "25px",
             padding: "0px",
-            fontSize: "12px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
@@ -400,31 +310,14 @@ const LightSettings = () => {
           })
         }
         type="number"
-        inputProps={{
-          style: {
-            MozAppearance: "textfield",
-            paddingRight: 0,
-          },
-        }}
         sx={{
-          width: "80px",
-          "& input[type=number]": {
-            MozAppearance: "textfield",
-          },
-          "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
-            {
-              WebkitAppearance: "none",
-              margin: 0,
-            },
+          width: "150px",
           "& .MuiInputBase-root": {
-            height: "24px",
+            height: "25px",
             padding: "0px",
-            fontSize: "12px",
+            fontSize: "9px",
             textAlign: "center",
-            color: "#529d36",
-            backgroundColor: "#ddd",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
+            backgroundColor: "#e0e0e0",
           },
           "& .MuiOutlinedInput-notchedOutline": {
             border: "none",
