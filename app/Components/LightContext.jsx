@@ -7,8 +7,10 @@ export const LightContext = createContext();
 
 export const LightProvider = ({ children }) => {
   const maxLightsPerType = 5;
+  const min = 1;
   const [lights, setLights] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const lightPresets = {
     AMBIENT: (apiLight) => ({
@@ -105,7 +107,13 @@ export const LightProvider = ({ children }) => {
     );
   };
   const deleteLight = (id) => {
-    setLights((prevLights) => prevLights.filter((light) => light.id !== id));
+    if (lights.length > min) {
+      setLights((prevLights) => prevLights.filter((light) => light.id !== id));
+    } else {
+      console.error("Minimum 1 light required.");
+      setSnackbarOpen(true);
+      setSnackbarMessage("Minimum 1 light required.");
+    }
   };
 
   const addLight = (newLight) => {

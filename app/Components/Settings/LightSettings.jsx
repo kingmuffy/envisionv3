@@ -38,6 +38,7 @@ const LightSettings = () => {
 
   const maxLights = 5;
   const [expandedPanel, setExpandedPanel] = useState(null);
+  const [message, setMessage] = useState("");
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedPanel(isExpanded ? panel : null);
@@ -88,7 +89,12 @@ const LightSettings = () => {
       (l) => l.type === lightType.toUpperCase()
     ).length;
 
-    if (lightType === "" || typeCount >= maxLights) {
+    if (lightType === "") {
+      setSnackbarOpen(true);
+      setMessage("Select light Type!");
+      return;
+    } else if (typeCount >= maxLights) {
+      setMessage("Maximum 5 lights allowed for this type!");
       setSnackbarOpen(true);
       return;
     }
@@ -865,7 +871,7 @@ const LightSettings = () => {
           severity="warning"
           sx={{ width: "100%" }}
         >
-          Maximum 5 lights of this category can be added in the scene!
+          {message}
         </Alert>
       </Snackbar>
     </Box>

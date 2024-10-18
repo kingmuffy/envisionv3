@@ -20,7 +20,7 @@ import {
   addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import MainNode from "../../Components/MainNode";
+import MainNode from "../../Components/Editmainnode";
 import MapNode from "../../Components/EditMapNode";
 import ControlGUI from "../../Components/EditControl";
 import { MapContext } from "../../EditContext";
@@ -125,7 +125,7 @@ function FabricPage({ params }) {
           id: `edge-${mapNode.id}`,
           source: mapNode.id,
           target: "1",
-          targetHandle: `handle-${index}`,
+          targetHandle: `handle-${mapNode.data.mapType.toLowerCase()}`, // Use the correct handle ID
           animated: true,
           data: {
             mapType: mapNode.data.mapType, // Attach the mapType to the edge
@@ -185,10 +185,9 @@ function FabricPage({ params }) {
       }
 
       const targetNode = nodes.find((node) => node.id === params.target);
-      const targetHandleIndex = params.targetHandle?.replace("handle-", "");
-      if (!targetHandleIndex) return;
-
-      const targetMapType = targetNode?.data?.maps[parseInt(targetHandleIndex)];
+      const targetMapType = params.targetHandle
+        ?.replace("handle-", "")
+        .toUpperCase(); // Extract the map type from handle ID
 
       if (targetMapType) {
         const mapNodeId = params.source;
