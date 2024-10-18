@@ -11,6 +11,7 @@ export const LightProvider = ({ children }) => {
   const [lights, setLights] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [sever, setSever] = useState("success");
 
   const lightPresets = {
     AMBIENT: (apiLight) => ({
@@ -57,7 +58,7 @@ export const LightProvider = ({ children }) => {
       try {
         const response = await axios.get("/api/getdefault", {
           headers: {
-            "Cache-Control": "no-cache", // Prevent client-side caching
+            "Cache-Control": "no-cache",
           },
         });
         const apiProject = response.data;
@@ -85,6 +86,8 @@ export const LightProvider = ({ children }) => {
         setLights(mappedLights.filter((light) => light !== null));
 
         setSnackbarOpen(true);
+        setSnackbarMessage("Default light settings loaded successfully!");
+        setSever("success");
       } catch (error) {
         console.error("Failed to fetch lights from API:", error);
       }
@@ -113,6 +116,7 @@ export const LightProvider = ({ children }) => {
       console.error("Minimum 1 light required.");
       setSnackbarOpen(true);
       setSnackbarMessage("Minimum 1 light required.");
+      setSever("warning");
     }
   };
 
@@ -219,10 +223,10 @@ export const LightProvider = ({ children }) => {
       >
         <Alert
           onClose={handleCloseSnackbar}
-          severity="success"
+          severity={sever}
           sx={{ width: "100%" }}
         >
-          Default light settings loaded successfully!
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </LightContext.Provider>

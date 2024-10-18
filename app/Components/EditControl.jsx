@@ -1065,6 +1065,7 @@ const ControlGUI = ({ addMapNode, id }) => {
           ) : selectedIcon === "sun" ? (
             <Button
               variant="contained"
+              hidden
               sx={{
                 backgroundColor: "green",
                 color: "white",
