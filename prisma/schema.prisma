@@ -53,6 +53,10 @@ model Camera {
     near Float
     far  Float
     fov  Float
+    minZoom       Float?    // Add this field as nullable
+  maxZoom       Float?    // Add this field as nullable
+  minPolarAngle Float?    // Already included but nullable
+  maxPolarAngle Float?    // Already included but nullable
     targetPosition Json?
      cameraprojectId String @map("cameraprojectId")  @db.ObjectId
   cameraproject   Cameraproject  @relation(fields: [cameraprojectId], references: [id])

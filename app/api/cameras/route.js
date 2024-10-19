@@ -8,33 +8,30 @@ export async function POST(request) {
     const body = await request.json();
     const { projectName, cameraSettings } = body;
 
-    // Check if cameraSettings is present and valid
     if (!cameraSettings || !Array.isArray(cameraSettings)) {
       throw new Error("cameraSettings is missing or not an array.");
     }
 
-    // Sanitize camera settings data
     const sanitizedSettings = cameraSettings.map((camera) => ({
       name: camera.name,
-      cameraposition: camera.cameraposition
-        ? JSON.stringify(camera.cameraposition)
-        : null,
+      cameraposition: JSON.stringify(camera.cameraposition),
       near: camera.near,
       far: camera.far,
       fov: camera.fov,
-      targetPosition: camera.targetPosition
-        ? JSON.stringify(camera.targetPosition)
-        : null,
+      minZoom: camera.minZoom,
+      maxZoom: camera.maxZoom,
+      minPolarAngle: camera.minPolarAngle,
+      maxPolarAngle: camera.maxPolarAngle,
+      targetPosition: JSON.stringify(camera.targetPosition),
     }));
 
     console.log("Sanitized Camera Settings:", sanitizedSettings);
 
-    // Create a new Cameraproject with related Camera settings
     const createdProject = await prisma.cameraproject.create({
       data: {
         name: projectName,
         cameraSettings: {
-          create: sanitizedSettings, // Link camera settings here
+          create: sanitizedSettings,
         },
       },
     });

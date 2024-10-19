@@ -59,10 +59,8 @@ const CameraSettings = () => {
   const [renameInput, setRenameInput] = useState("");
 
   const [setCameraSuccess, setSetCameraSuccess] = useState(false);
-  // State for tracking the expanded panel
   const [expandedPanel, setExpandedPanel] = useState(null);
 
-  // Accordion toggle handler
   const handleAccordionChange = (panelName) => (event, isExpanded) => {
     setExpandedPanel(isExpanded ? panelName : null);
   };
@@ -84,6 +82,11 @@ const CameraSettings = () => {
         near: 0.1,
         far: 1000,
         fov: 50,
+        zoom: 1,
+        minZoom: 0.1,
+        maxZoom: 0.7,
+        minPolarAngle: 0,
+        maxPolarAngle: Math.PI,
       },
     };
 
@@ -102,11 +105,19 @@ const CameraSettings = () => {
       setCameraChanged(false);
     }
   };
+  const handleMinPolarAngleChange = (event, newValue) => {
+    setCameraChanged(true);
+    updateActiveCameraSettings({ minPolarAngle: newValue });
+  };
+  const handleMaxPolarAngleChange = (event, newValue) => {
+    setCameraChanged(true);
+    updateActiveCameraSettings({ maxPolarAngle: newValue });
+  };
 
   const handleSetCamera = () => {
     // saveCameraSettings();
     setCameraChanged(false);
-    // setSnackbarMessage("Camera settings saved successfully!");
+    setSnackbarMessage("Camera settings saved successfully!");
     // setSetCameraSuccess(true);
   };
   // Snackbar close handlers
@@ -215,7 +226,6 @@ const CameraSettings = () => {
         height: "100vh",
       }}
     >
-      {/* Camera Settings Accordion List */}
       <Box
         sx={{
           flexGrow: 1,
@@ -512,6 +522,225 @@ const CameraSettings = () => {
                     />
                   </Box>
                 ))}
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  marginTop: "10px",
+                }}
+              >
+                <Box
+                  key="minZoom"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    width: "100%",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      fontWeight: "normal",
+                      color: "#333",
+                      minWidth: "30px",
+                      textAlign: "left",
+                      flexShrink: 1,
+                      marginRight: "50px",
+                    }}
+                  >
+                    Min Zoom
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={camera.settings.minZoom || 0.1} // Default value for minZoom
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      if (!isNaN(newValue)) {
+                        updateActiveCameraSettings({ minZoom: newValue });
+                      }
+                    }}
+                    inputProps={{
+                      step: "0.1",
+                      style: {
+                        textAlign: "center",
+                        padding: "5px 5px",
+                        height: "25px",
+                      },
+                    }}
+                    sx={{
+                      flexGrow: 1,
+                      width: "80px",
+                      backgroundColor: "#f0f0f0",
+                      "& .MuiInputBase-input": {
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "green",
+                        textAlign: "center",
+                        padding: "0",
+                      },
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "transparent",
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+
+                <Box
+                  key="maxZoom"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    width: "100%",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      fontWeight: "normal",
+                      color: "#333",
+                      minWidth: "30px",
+                      textAlign: "left",
+                      flexShrink: 1,
+                      marginRight: "50px",
+                    }}
+                  >
+                    Max Zoom
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={camera.settings.maxZoom || 5} // Default value for maxZoom
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      if (!isNaN(newValue)) {
+                        updateActiveCameraSettings({ maxZoom: newValue });
+                      }
+                    }}
+                    inputProps={{
+                      step: "0.1",
+                      style: {
+                        textAlign: "center",
+                        padding: "5px 5px",
+                        height: "25px",
+                      },
+                    }}
+                    sx={{
+                      flexGrow: 1,
+                      width: "80px",
+                      backgroundColor: "#f0f0f0",
+                      "& .MuiInputBase-input": {
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "green",
+                        textAlign: "center",
+                        padding: "0",
+                      },
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "transparent",
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  marginTop: "10px",
+                }}
+              >
+                {/* Control for minPolarAngle */}
+                <Box
+                  key="minPolarAngle"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    width: "100%",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      fontWeight: "normal",
+                      color: "#333",
+                      minWidth: "30px",
+                      textAlign: "left",
+                      flexShrink: 1,
+                      marginRight: "50px",
+                    }}
+                  >
+                    Min Polar Angle
+                  </Typography>
+                  <TextField
+                    type="number"
+                    value={camera.settings.minPolarAngle || 0} // Default value for minPolarAngle
+                    onChange={(e) => {
+                      const newValue = parseFloat(e.target.value);
+                      if (!isNaN(newValue)) {
+                        handleMinPolarAngleChange(null, newValue);
+                      }
+                    }}
+                    inputProps={{
+                      step: "0.1",
+                      style: {
+                        textAlign: "center",
+                        padding: "5px 5px",
+                        height: "25px",
+                      },
+                    }}
+                    sx={{
+                      flexGrow: 1,
+                      width: "80px",
+                      backgroundColor: "#f0f0f0",
+                      "& .MuiInputBase-input": {
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "green",
+                        textAlign: "center",
+                        padding: "0",
+                      },
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "transparent",
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+              </Box>
+              <Box key="maxPolarAngle" sx={{ marginTop: 2 }}>
+                <Typography
+                  sx={{
+                    fontSize: "12px",
+                    fontWeight: "normal",
+                    color: "#333",
+                    marginBottom: "6px",
+                  }}
+                >
+                  Max Polar Angle
+                </Typography>
+                <CustomSlider
+                  value={camera.settings.maxPolarAngle || Math.PI}
+                  min={0}
+                  max={Math.PI}
+                  step={0.1}
+                  onChange={(e, newValue) => {
+                    handleMaxPolarAngleChange(null, newValue);
+                  }}
+                  sx={{ color: "green" }}
+                />
               </Box>
 
               <Box display="flex" flexDirection="column" gap={2} mt={2}>

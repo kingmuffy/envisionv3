@@ -239,16 +239,14 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         setSnackbarMessage("Light settings saved successfully!");
       } else if (selectedIcon === "camera") {
         const response = await saveCameraSettings(cameraSceneName);
-        if (response.status === "success") {
-          console.log("Camera settings saved successfully!");
-        } else {
-          console.log("Failed to save camera settings.");
+        if (response.status !== "success") {
+          setSnackbarMessage("Failed to save camera settings.");
+          setSnackbarOpen(true);
         }
       }
     } catch (error) {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
-    } finally {
       setSnackbarOpen(true);
     }
   };

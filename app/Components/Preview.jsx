@@ -29,6 +29,7 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 // Component to handle camera updates based on active camera index
+// Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
   const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
@@ -50,7 +51,8 @@ const CameraUpdater = () => {
       camera.near = activeCameraSettings.near;
       camera.far = activeCameraSettings.far;
       camera.fov = activeCameraSettings.fov;
-      camera.updateProjectionMatrix();
+      camera.zoom = activeCameraSettings.zoom || 1; // Set zoom value
+      camera.updateProjectionMatrix(); // IMPORTANT: Call this to apply changes to zoom, fov, etc.
       resetUpdateTrigger();
     }
   }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
@@ -149,19 +151,32 @@ const Preview = () => {
   useEffect(() => {
     if (orbitControlsRef.current && cameras.length > 0) {
       const activeCameraSettings = cameras[activeCameraIndex].settings;
-      orbitControlsRef.current.target.set(
-        activeCameraSettings.target.x,
-        activeCameraSettings.target.y,
-        activeCameraSettings.target.z
-      );
+
+      // Update the camera
       orbitControlsRef.current.object.position.set(
         activeCameraSettings.position.x,
         activeCameraSettings.position.y,
         activeCameraSettings.position.z
       );
-      orbitControlsRef.current.update();
+
+      // Update the target and zoom limits
+      orbitControlsRef.current.target.set(
+        activeCameraSettings.target.x,
+        activeCameraSettings.target.y,
+        activeCameraSettings.target.z
+      );
+      orbitControlsRef.current.minDistance =
+        activeCameraSettings.minZoom || 0.1;
+      orbitControlsRef.current.maxDistance = activeCameraSettings.maxZoom || 5;
+
+      orbitControlsRef.current.maxPolarAngle =
+        activeCameraSettings.maxPolarAngle || Math.PI / 2;
+      orbitControlsRef.current.minPolarAngle =
+        activeCameraSettings.minPolarAngle || 0;
+
+      orbitControlsRef.current.update(); // Reapply the changes to the OrbitControls
     }
-  }, [activeCameraIndex, cameras]);
+  }, [activeCameraIndex, cameras, orbitControlsRef]);
 
   // Handle camera change from dropdown
   const handleCameraSelectChange = (event) => {
@@ -440,6 +455,7 @@ const Preview = () => {
             fov: cameras[activeCameraIndex]?.settings?.fov || 50,
             near: cameras[activeCameraIndex]?.settings?.near || 0.1,
             far: cameras[activeCameraIndex]?.settings?.far || 1000,
+            zoom: cameras[activeCameraIndex]?.settings?.zoom || 1,
           }}
         >
           {lights.map((light) => {
@@ -494,7 +510,6 @@ const Preview = () => {
                 return null;
             }
           })}
-
           {/* Render Model */}
           {currentModel && (
             <PreviewScene
@@ -502,9 +517,20 @@ const Preview = () => {
               setCurrentModel={setCurrentModel}
             />
           )}
-
           <gridHelper args={[1000, 1000, "#ffffff", "#555555"]} />
-          <OrbitControls ref={orbitControlsRef} />
+          <OrbitControls
+            ref={orbitControlsRef}
+            minDistance={cameras[activeCameraIndex]?.settings?.minZoom || 0.1}
+            maxDistance={cameras[activeCameraIndex]?.settings?.maxZoom || 5}
+            minPolarAngle={
+              cameras[activeCameraIndex]?.settings?.minPolarAngle || 0
+            }
+            maxPolarAngle={
+              cameras[activeCameraIndex]?.settings?.maxPolarAngle || Math.PI / 2
+            }
+            enableZoom={true}
+          />
+
           {cameras.map((camera, index) => (
             <CustomCameraHelper key={index} cameraSettings={camera.settings} />
           ))}

@@ -14,13 +14,17 @@ export const CameraProvider = ({ children }) => {
 
   const maxCameras = 4;
 
-  // Default camera settings template to avoid undefined errors
   const defaultCameraSettings = {
     position: { x: 0, y: 0, z: 0 },
     target: { x: 0, y: 0, z: 0 },
     near: 0.1,
     far: 1000,
     fov: 50,
+    zoom: 1,
+    minZoom: 0.1,
+    maxZoom: 5,
+    minPolarAngle: 0,
+    maxPolarAngle: Math.PI,
   };
 
   useEffect(() => {
@@ -40,6 +44,23 @@ export const CameraProvider = ({ children }) => {
               near: camera.near || defaultCameraSettings.near,
               far: camera.far || defaultCameraSettings.far,
               fov: camera.fov || defaultCameraSettings.fov,
+              zoom: camera.zoom || defaultCameraSettings.zoom, // Add zoom
+              minZoom:
+                camera.minZoom !== undefined
+                  ? camera.minZoom
+                  : defaultCameraSettings.minZoom,
+              maxZoom:
+                camera.maxZoom !== undefined
+                  ? camera.maxZoom
+                  : defaultCameraSettings.maxZoom,
+              minPolarAngle:
+                camera.minPolarAngle !== undefined
+                  ? camera.minPolarAngle
+                  : defaultCameraSettings.minPolarAngle,
+              maxPolarAngle:
+                camera.maxPolarAngle !== undefined
+                  ? camera.maxPolarAngle
+                  : defaultCameraSettings.maxPolarAngle,
             },
           }));
           setCameras(apiCameras);
@@ -118,6 +139,13 @@ export const CameraProvider = ({ children }) => {
           ...currentCamera.settings.target,
           ...(newSettings.target || {}),
         },
+        zoom: newSettings.zoom ?? currentCamera.settings.zoom,
+        minZoom: newSettings.minZoom ?? currentCamera.settings.minZoom,
+        maxZoom: newSettings.maxZoom ?? currentCamera.settings.maxZoom,
+        minPolarAngle:
+          newSettings.minPolarAngle ?? currentCamera.settings.minPolarAngle,
+        maxPolarAngle:
+          newSettings.maxPolarAngle ?? currentCamera.settings.maxPolarAngle,
       };
       return updatedCameras;
     });
@@ -127,7 +155,6 @@ export const CameraProvider = ({ children }) => {
     setUpdateTrigger((prev) => !prev);
   };
 
-  // Function to reset the update trigger
   const resetUpdateTrigger = () => {
     setUpdateTrigger(false);
   };
@@ -135,11 +162,15 @@ export const CameraProvider = ({ children }) => {
   const saveCameraSettings = async (projectName) => {
     try {
       const formattedCameras = cameras.map((camera) => ({
-        name: camera.name, // Add the camera name to the data being sent
+        name: camera.name,
         cameraposition: camera.settings.position,
         near: camera.settings.near,
         far: camera.settings.far,
         fov: camera.settings.fov,
+        minZoom: camera.settings.minZoom,
+        maxZoom: camera.settings.maxZoom,
+        minPolarAngle: camera.settings.minPolarAngle,
+        maxPolarAngle: camera.settings.maxPolarAngle,
         targetPosition: camera.settings.target,
       }));
 
@@ -171,11 +202,11 @@ export const CameraProvider = ({ children }) => {
         cameras,
         activeCameraIndex,
         addCamera,
-        setActiveCamera, // Ensure this is available in your context
+        setActiveCamera,
         updateActiveCameraSettings,
         saveCameraSettings,
         handleViewCamera,
-        resetUpdateTrigger, // Provide resetUpdateTrigger to the context
+        resetUpdateTrigger,
         setUpdateTrigger,
         updateTrigger,
         deleteCamera,
