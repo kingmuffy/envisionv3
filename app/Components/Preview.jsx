@@ -24,11 +24,9 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
-// Component to handle camera updates based on active camera index
 // Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
@@ -51,9 +49,9 @@ const CameraUpdater = () => {
       camera.near = activeCameraSettings.near;
       camera.far = activeCameraSettings.far;
       camera.fov = activeCameraSettings.fov;
-      camera.zoom = activeCameraSettings.zoom || 1; // Set zoom value
-      camera.updateProjectionMatrix(); // IMPORTANT: Call this to apply changes to zoom, fov, etc.
-      resetUpdateTrigger();
+      camera.zoom = activeCameraSettings.zoom || 1;
+      camera.updateProjectionMatrix(); // Apply changes to camera
+      resetUpdateTrigger(); // Reset trigger to prevent continuous updates
     }
   }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
 
@@ -70,11 +68,10 @@ const PreviewScene = ({ model, setCurrentModel }) => {
       scene.add(model);
       setCurrentModel(model);
       return () => {
-        console.log("Removing previous model from scene", model);
+        console.log("Removing model from scene", model);
         scene.remove(model);
         model.traverse((child) => {
           if (child.isMesh) {
-            console.log("Disposing geometry and material of:", child.name);
             child.geometry.dispose();
             if (Array.isArray(child.material)) {
               child.material.forEach((material) => material.dispose());
@@ -103,9 +100,8 @@ const Preview = () => {
   const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = useRef(new TextureLoader()).current;
-
-  // Reference for OrbitControls
   const orbitControlsRef = useRef();
+  const materialRef = useRef(); // Use ref for material to avoid recreating it
 
   // Load model when path changes
   useEffect(() => {
@@ -118,8 +114,10 @@ const Preview = () => {
         (loadedModel) => {
           loadedModel.traverse((child) => {
             if (child.isMesh) {
-              const material = createMaterial();
-              child.material = material;
+              if (!materialRef.current) {
+                materialRef.current = createMaterial(); // Create material only once
+              }
+              child.material = materialRef.current;
               child.castShadow = true;
               child.receiveShadow = true;
             }
@@ -147,34 +145,33 @@ const Preview = () => {
       });
     }
   }, [currentModel, updateTrigger, connectedMaps, materialParams]);
+
   // Update OrbitControls when active camera changes
   useEffect(() => {
     if (orbitControlsRef.current && cameras.length > 0) {
       const activeCameraSettings = cameras[activeCameraIndex].settings;
 
-      // Update the camera
       orbitControlsRef.current.object.position.set(
         activeCameraSettings.position.x,
         activeCameraSettings.position.y,
         activeCameraSettings.position.z
       );
 
-      // Update the target and zoom limits
       orbitControlsRef.current.target.set(
         activeCameraSettings.target.x,
         activeCameraSettings.target.y,
         activeCameraSettings.target.z
       );
+
       orbitControlsRef.current.minDistance =
         activeCameraSettings.minZoom || 0.1;
       orbitControlsRef.current.maxDistance = activeCameraSettings.maxZoom || 5;
-
       orbitControlsRef.current.maxPolarAngle =
         activeCameraSettings.maxPolarAngle || Math.PI / 2;
       orbitControlsRef.current.minPolarAngle =
         activeCameraSettings.minPolarAngle || 0;
 
-      orbitControlsRef.current.update(); // Reapply the changes to the OrbitControls
+      orbitControlsRef.current.update(); // Apply OrbitControls updates
     }
   }, [activeCameraIndex, cameras, orbitControlsRef]);
 
@@ -287,7 +284,6 @@ const Preview = () => {
             );
 
             texture.needsUpdate = true;
-
             assignTextureToMaterial(material, mapType, texture);
           },
           undefined,
@@ -413,7 +409,6 @@ const Preview = () => {
 
   return (
     <>
-      {/* File Upload Icon */}
       <Box
         sx={{
           position: "fixed",
@@ -488,7 +483,6 @@ const Preview = () => {
                     key={light.id}
                     intensity={light.intensity}
                     skyColor={light.color || "#ffffff"}
-                    // groundColor={light.groundColor || "#0000ff"}
                   />
                 );
               case "SPOT":
@@ -620,4 +614,5 @@ const Preview = () => {
     </>
   );
 };
+
 export default Preview;

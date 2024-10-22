@@ -234,20 +234,24 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         } else {
           setSnackbarMessage("Failed to save fabric data.");
         }
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       } else if (selectedIcon === "sun") {
         await handleSaveLights(lightSceneName);
         setSnackbarMessage("Light settings saved successfully!");
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       } else if (selectedIcon === "camera") {
         const response = await saveCameraSettings(cameraSceneName);
-        if (response.status !== "success") {
+        if (response.status === "success") {
+          setSnackbarMessage("Camera settings saved successfully!");
+        } else {
           setSnackbarMessage("Failed to save camera settings.");
-          setSnackbarOpen(true);
         }
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       }
     } catch (error) {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
-      setSnackbarOpen(true);
+      setSnackbarOpen(true); // Ensure snackbar is shown after setting the error message.
     }
   };
 

@@ -45,7 +45,7 @@ function FabricPage() {
   const [showReactFlow, setShowReactFlow] = useState(true);
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
-
+  const [message, setMessage] = useState("");
   const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
 
   const mainNode = useMemo(
@@ -92,16 +92,17 @@ function FabricPage() {
         mapType: null,
         file: null,
         updateNodeData: (nodeId, file, thumbnail) => {
-          setNodes((nds) =>
-            nds.map((node) =>
+          setNodes((nds) => {
+            const newNodes = nds.map((node) =>
               node.id === nodeId
                 ? {
                     ...node,
                     data: { ...node.data, thumbnail, label: file.name, file },
                   }
                 : node
-            )
-          );
+            );
+            return [...newNodes]; // Ensure the array is copied immutably
+          });
           const mapNode = nodes.find((node) => node.id === nodeId);
           if (mapNode && mapNode.data.mapType) {
             updateConnectedMaps(mapNode.data.mapType, file);
@@ -134,7 +135,26 @@ function FabricPage() {
   const onConnect = useCallback(
     (params) => {
       const sourceNode = nodes.find((node) => node.id === params.source);
+
       if (!sourceNode || !sourceNode.data.file) {
+        // If no file is uploaded in the source node, show a warning
+        setMessage("You must upload a map before connecting nodes.");
+
+        setSnackbarOpen(true);
+        return;
+      }
+
+      // Check if the file is already connected to another map type in any node
+      const isFileAlreadyConnected = nodes.some(
+        (node) =>
+          node.data.mapType &&
+          node.data.file?.name === sourceNode.data.file.name
+      );
+
+      if (isFileAlreadyConnected) {
+        // If the file is already connected, show a warning and prevent connection
+        setMessage("This map is already connected to another node.");
+
         setSnackbarOpen(true);
         return;
       }
@@ -157,6 +177,7 @@ function FabricPage() {
 
         updateConnectedMaps(targetMapType, sourceNode.data.file);
       }
+
       setEdges((eds) => addEdge({ ...params, animated: true }, eds));
     },
     [nodes, setNodes, setEdges, updateConnectedMaps]
@@ -200,7 +221,10 @@ function FabricPage() {
 
       setNodes((nds) => nds.filter((node) => node.id !== id));
       setEdges((eds) =>
-        eds.filter((edge) => edge.source !== id && edge.target !== id)
+        eds.filter(
+          (edge) =>
+            edge.source !== selectedNode.id && edge.target !== selectedNode.id
+        )
       );
     }
     setModalOpen(false);
@@ -333,7 +357,7 @@ function FabricPage() {
           severity="warning"
           sx={{ width: "100%" }}
         >
-          You must upload a map before connecting nodes.
+          {message}{" "}
         </Alert>
       </Snackbar>
     </div>
