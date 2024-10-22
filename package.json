@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.658.1",
+    "@aws-sdk/s3-request-presigner": "^3.676.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.1.0",
@@ -20,6 +21,8 @@
     "@react-three/fiber": "^8.17.7",
     "axios": "^1.7.7",
     "date-fns": "^4.1.0",
+    "formidable": "^3.5.2",
+    "fs": "^0.0.1-security",
     "lodash.debounce": "^4.0.8",
     "mongodb": "^6.9.0",
     "mui": "^0.0.1",

@@ -220,11 +220,31 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
           formData.append(paramName, value);
         }
 
+        const uploadedMaps = {};
         for (const [mapType, file] of Object.entries(connectedMaps)) {
           if (file) {
-            const formKey = `${mapType.toLowerCase()}MapUrl`;
-            formData.append(formKey, file);
+            const mapUrlResponse = await axios.post(
+              "/api/generate-presigned-url",
+              {
+                fileType: file.type,
+                mapType,
+              }
+            );
+
+            const { uploadUrl, fileName } = mapUrlResponse.data;
+
+            await axios.put(uploadUrl, file, {
+              headers: { "Content-Type": file.type },
+            });
+
+            uploadedMaps[
+              `${mapType.toLowerCase()}MapUrl`
+            ] = `https://${process.env.NEXT_AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
           }
+        }
+
+        for (const [mapUrlKey, url] of Object.entries(uploadedMaps)) {
+          formData.append(mapUrlKey, url);
         }
 
         const response = await axios.post("/api/fabric", formData);
@@ -234,11 +254,11 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         } else {
           setSnackbarMessage("Failed to save fabric data.");
         }
-        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
+        setSnackbarOpen(true);
       } else if (selectedIcon === "sun") {
         await handleSaveLights(lightSceneName);
         setSnackbarMessage("Light settings saved successfully!");
-        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
+        setSnackbarOpen(true);
       } else if (selectedIcon === "camera") {
         const response = await saveCameraSettings(cameraSceneName);
         if (response.status === "success") {
@@ -246,12 +266,12 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         } else {
           setSnackbarMessage("Failed to save camera settings.");
         }
-        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
+        setSnackbarOpen(true);
       }
     } catch (error) {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
-      setSnackbarOpen(true); // Ensure snackbar is shown after setting the error message.
+      setSnackbarOpen(true);
     }
   };
 
