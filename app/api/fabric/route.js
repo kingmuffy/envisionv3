@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
+import formidable from "formidable";
+import fs from "fs";
 
 const prisma = new PrismaClient();
 
@@ -14,11 +16,11 @@ const s3Client = new S3Client({
   },
 });
 
-async function uploadFileToS3(fileBuffer, fileName, contentType) {
+async function uploadFileToS3(fileStream, fileName, contentType) {
   const params = {
     Bucket: process.env.NEXT_AWS_S3_BUCKET_NAME,
     Key: fileName,
-    Body: fileBuffer,
+    Body: fileStream,
     ContentType: contentType,
   };
 
@@ -36,11 +38,32 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
   }
 }
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    console.log("Form Data received:", formData);
+    const form = formidable({
+      multiples: true,
+      maxFileSize: 100 * 1024 * 1024,
+    });
 
+    const [fields, files] = await new Promise((resolve, reject) => {
+      form.parse(request, (err, fields, files) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve([fields, files]);
+      });
+    });
+
+    console.log("Form Data Fields:", fields);
+    console.log("Form Data Files:", files);
+
+    // Initial fabric data from form fields
     const fabricData = {
       diffuseMapUrl: null,
       envMapUrl: null,
@@ -55,29 +78,27 @@ export async function POST(request) {
       metalnessMapUrl: null,
       roughnessMapUrl: null,
       anisotropyMapUrl: null,
-      bumpScale: parseFloat(formData.get("bumpScale")),
-      displacementScale: parseFloat(formData.get("displacementScale")),
-      emissiveIntensity: parseFloat(formData.get("emissiveIntensity")),
-      metalness: parseFloat(formData.get("metalness")),
-      roughness: parseFloat(formData.get("roughness")),
-      displacementBias: parseFloat(formData.get("displacementBias")),
-      flatShading: formData.get("flatShading") === "true",
-      aoMapIntensity: parseFloat(formData.get("aoMapIntensity")),
-      clearcoat: parseFloat(formData.get("clearcoat")),
-      normalScaleX: parseFloat(formData.get("normalScaleX")),
-      normalScaleY: parseFloat(formData.get("normalScaleY")),
-      sheen: parseFloat(formData.get("sheen")),
-      fabricName: formData.get("fabricName"),
-      fabricColor: formData.get("fabricColor"),
-      envMapIntensity: parseFloat(formData.get("envMapIntensity")),
-      sheenRoughness: parseFloat(formData.get("sheenRoughness")),
-      anisotropy: parseFloat(formData.get("anisotropy")),
-      scaleX: parseFloat(formData.get("scaleX")),
-      scaleY: parseFloat(formData.get("scaleY")),
-      materialName: formData.get("materialName"),
+      bumpScale: parseFloat(fields.bumpScale),
+      displacementScale: parseFloat(fields.displacementScale),
+      emissiveIntensity: parseFloat(fields.emissiveIntensity),
+      metalness: parseFloat(fields.metalness),
+      roughness: parseFloat(fields.roughness),
+      displacementBias: parseFloat(fields.displacementBias),
+      flatShading: fields.flatShading === "true",
+      aoMapIntensity: parseFloat(fields.aoMapIntensity),
+      clearcoat: parseFloat(fields.clearcoat),
+      normalScaleX: parseFloat(fields.normalScaleX),
+      normalScaleY: parseFloat(fields.normalScaleY),
+      sheen: parseFloat(fields.sheen),
+      fabricName: fields.fabricName,
+      fabricColor: fields.fabricColor,
+      envMapIntensity: parseFloat(fields.envMapIntensity),
+      sheenRoughness: parseFloat(fields.sheenRoughness),
+      anisotropy: parseFloat(fields.anisotropy),
+      scaleX: parseFloat(fields.scaleX),
+      scaleY: parseFloat(fields.scaleY),
+      materialName: fields.materialName,
     };
-
-    console.log("Initial fabric data:", fabricData);
 
     const mapTypes = [
       "diffuseMapUrl",
@@ -95,15 +116,16 @@ export async function POST(request) {
       "anisotropyMapUrl",
     ];
 
+    // Process each file and upload to S3
     for (const mapType of mapTypes) {
-      const file = formData.get(mapType);
+      const file = files[mapType];
       if (file && file.size > 0) {
-        console.log(`Processing file for ${mapType}:`, file.name);
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const fileName = `${uuidv4()}-${file.name}`;
-        const contentType = file.type;
+        console.log(`Processing file for ${mapType}:`, file.originalFilename);
+        const fileStream = fs.createReadStream(file.filepath);
+        const fileName = `${uuidv4()}-${file.originalFilename}`;
+        const contentType = file.mimetype;
 
-        const fileUrl = await uploadFileToS3(fileBuffer, fileName, contentType);
+        const fileUrl = await uploadFileToS3(fileStream, fileName, contentType);
         fabricData[mapType] = fileUrl;
       } else {
         console.log(`No file uploaded for ${mapType}`);
@@ -112,6 +134,7 @@ export async function POST(request) {
 
     console.log("Final fabric data before saving to DB:", fabricData);
 
+    // Save the fabric data to the database
     const savedFabric = await prisma.fabricMap.create({
       data: fabricData,
     });
