@@ -27,7 +27,6 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
-// Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
   const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
@@ -50,15 +49,14 @@ const CameraUpdater = () => {
       camera.far = activeCameraSettings.far;
       camera.fov = activeCameraSettings.fov;
       camera.zoom = activeCameraSettings.zoom || 1;
-      camera.updateProjectionMatrix(); // Apply changes to camera
-      resetUpdateTrigger(); // Reset trigger to prevent continuous updates
+      camera.updateProjectionMatrix();
+      resetUpdateTrigger();
     }
   }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
 
   return null;
 };
 
-// Component to load and handle 3D model
 const PreviewScene = ({ model, setCurrentModel }) => {
   const { scene } = useThree();
 
@@ -171,25 +169,22 @@ const Preview = () => {
       orbitControlsRef.current.minPolarAngle =
         activeCameraSettings.minPolarAngle || 0;
 
-      orbitControlsRef.current.update(); // Apply OrbitControls updates
+      orbitControlsRef.current.update();
     }
   }, [activeCameraIndex, cameras, orbitControlsRef]);
 
-  // Handle camera change from dropdown
   const handleCameraSelectChange = (event) => {
     const selectedIndex = event.target.value;
     setActiveCamera(selectedIndex);
-    handleViewCamera(); // Trigger view update for selected camera
+    handleViewCamera();
   };
 
-  // Handle file upload click
   const handleFileUploadClick = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Handle file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -198,7 +193,6 @@ const Preview = () => {
     }
   };
 
-  // Create new material based on parameters
   const createMaterial = () => {
     return new MeshPhysicalMaterial({
       color: 0xffffff,
