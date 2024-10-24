@@ -34,32 +34,30 @@ function FabricPage({ params }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Track custom messages for Snackbar
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [currentModel, setCurrentModel] = useState(null);
+  const [deletedMaps, setDeletedMaps] = useState({});
 
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
-  const [deletedMaps, setDeletedMaps] = useState({});
 
-  const mapContext = useContext(MapContext);
-  if (!mapContext) {
-    throw new Error("MapContext must be used within a MapProvider");
-  }
-
-  const { updateConnectedMaps, setInitialId } = mapContext;
+  const { updateConnectedMaps, setInitialId, disconnectMap } =
+    useContext(MapContext);
 
   // Callback to receive currentModel from Preview
   const handleModelLoaded = useCallback((model) => {
-    setCurrentModel(model); // Store the current model for future use
+    setCurrentModel(model);
   }, []);
 
+  // Set the initial context ID when component mounts
   useEffect(() => {
     if (id) {
-      setInitialId(id); // Set initial ID for context
-      fetchMapData(id); // Fetch map data once when id changes
+      setInitialId(id);
+      fetchMapData(id);
     }
   }, [id]);
 
+  // Fetch initial maps from the server
   const fetchMapData = async (id) => {
     try {
       const response = await axios.get(`/api/maps?id=${id}`);
@@ -119,16 +117,16 @@ function FabricPage({ params }) {
           };
         });
 
-      setNodes((prevNodes) => [...prevNodes, ...mapNodes]);
+      setNodes((prevNodes) => [mainNode, ...mapNodes]);
       setEdges((prevEdges) =>
-        mapNodes.map((mapNode, index) => ({
+        mapNodes.map((mapNode) => ({
           id: `edge-${mapNode.id}`,
           source: mapNode.id,
           target: "1",
-          targetHandle: `handle-${mapNode.data.mapType.toLowerCase()}`, // Use the correct handle ID
+          targetHandle: `handle-${mapNode.data.mapType.toLowerCase()}`,
           animated: true,
           data: {
-            mapType: mapNode.data.mapType, // Attach the mapType to the edge
+            mapType: mapNode.data.mapType,
           },
         }))
       );
@@ -137,6 +135,7 @@ function FabricPage({ params }) {
     }
   };
 
+  // Define the main node for the fabric model
   const mainNode = useMemo(
     () => ({
       id: "1",
@@ -168,13 +167,44 @@ function FabricPage({ params }) {
     setNodes([mainNode]);
   }, [mainNode]);
 
+  // Add new map node
   const addMapNode = useCallback(() => {
-    setSnackbarMessage(
-      "You are currently in editing mode. You can only reassign a map, but not create new nodes."
-    );
-    setSnackbarOpen(true);
+    const mapNodeId = `map-${nodes.length}`;
+    setNodes((prevNodes) => [
+      ...prevNodes,
+      {
+        id: mapNodeId,
+        type: "mapNode",
+        position: {
+          x: Math.random() * 150 + 150,
+          y: Math.random() * 250 + 50,
+        },
+        data: {
+          label: "Map Node",
+          fabricId: id,
+          updateNodeData: (nodeId, file, thumbnail) => {
+            setNodes((nds) =>
+              nds.map((node) =>
+                node.id === nodeId
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        thumbnail,
+                        file,
+                        label: file.name,
+                      },
+                    }
+                  : node
+              )
+            );
+          },
+        },
+      },
+    ]);
   }, []);
 
+  // Handle connection of nodes
   const onConnect = useCallback(
     (params) => {
       const sourceNode = nodes.find((node) => node.id === params.source);
@@ -184,14 +214,14 @@ function FabricPage({ params }) {
         return;
       }
 
-      const targetNode = nodes.find((node) => node.id === params.target);
       const targetMapType = params.targetHandle
         ?.replace("handle-", "")
-        .toUpperCase(); // Extract the map type from handle ID
+        .toUpperCase();
 
       if (targetMapType) {
         const mapNodeId = params.source;
 
+        // Update the source node with the correct map type
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
@@ -213,20 +243,29 @@ function FabricPage({ params }) {
     [nodes, setNodes, setEdges, updateConnectedMaps]
   );
 
-  const onEdgeDoubleClick = useCallback((event) => {
-    event.stopPropagation();
-    setSnackbarMessage(
-      "You are currently in editing mode. Disconnecting edges is not allowed."
-    );
-    setSnackbarOpen(true);
-  }, []);
-
-  const onEdgesDelete = useCallback(() => {
-    setSnackbarMessage(
-      "You are currently in editing mode. Deleting edges is not allowed."
-    );
-    setSnackbarOpen(true);
-  }, []);
+  // Handle double-click on edges to disconnect
+  const onEdgeDoubleClick = useCallback(
+    (event, edge) => {
+      event.stopPropagation();
+      disconnectMap(edge.data.mapType);
+      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === edge.source) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                mapType: null,
+              },
+            };
+          }
+          return node;
+        })
+      );
+    },
+    [disconnectMap, setEdges, setNodes]
+  );
 
   const closeSnackbar = () => setSnackbarOpen(false);
 
@@ -299,14 +338,6 @@ function FabricPage({ params }) {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onEdgesDelete={onEdgesDelete}
-              onNodeContextMenu={(event) => {
-                event.preventDefault();
-                setSnackbarMessage(
-                  "You are currently in editing mode. Deleting nodes is not allowed."
-                );
-                setSnackbarOpen(true);
-              }}
               onEdgeDoubleClick={onEdgeDoubleClick}
               fitView
               defaultEdgeOptions={{ style: { strokeWidth: 4, stroke: "#333" } }}

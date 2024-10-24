@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import * as THREE from "three";
 
@@ -8,9 +8,10 @@ export const MapContext = createContext();
 export const MapProvider = ({ children, initialMaterialParams = {} }) => {
   const [connectedMaps, setConnectedMaps] = useState({});
   const [updateTrigger, setUpdateTrigger] = useState(0);
-  const [materialParams, setMaterialParams] = useState({
-    materialName: initialMaterialParams.materialName || "", // Add materialName here
+  const [isLoading, setIsLoading] = useState(true);
 
+  const [materialParams, setMaterialParams] = useState({
+    materialName: initialMaterialParams.materialName || "",
     bumpScale: initialMaterialParams.bumpScale || 0.0,
     sheen: initialMaterialParams.sheen || true,
     displacementScale: initialMaterialParams.displacementScale || 0.0,
@@ -35,11 +36,19 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
   });
 
   const [materialId, setMaterialId] = useState(null);
+  const hasFetchedMaterialParams = useRef(false);
+  const manualUpdate = useRef(false);
+
+  useEffect(() => {
+    hasFetchedMaterialParams.current = false;
+    setIsLoading(true);
+  }, [materialId]);
 
   useEffect(() => {
     const fetchMaterialParams = async () => {
       if (!materialId) return;
 
+      setIsLoading(true);
       try {
         const response = await axios.get(`/api/maps?id=${materialId}`);
         const mapsData = response.data.map;
@@ -65,18 +74,26 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
         });
       } catch (error) {
         console.error("Error fetching maps:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchMaterialParams();
   }, [materialId]);
 
+  useEffect(() => {
+    if (manualUpdate.current) {
+      setUpdateTrigger((prev) => prev + 1);
+      manualUpdate.current = false;
+    }
+  }, [connectedMaps]);
+
   const updateConnectedMaps = (mapType, file) => {
     setConnectedMaps((prev) => ({
       ...prev,
       [mapType]: file,
     }));
-    setUpdateTrigger((prev) => prev + 1);
   };
 
   const disconnectMap = (mapType) => {
@@ -85,7 +102,6 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
       delete updatedMaps[mapType];
       return updatedMaps;
     });
-    setUpdateTrigger((prev) => prev + 1);
   };
 
   const updateMaterialParams = (param, value) => {
@@ -125,6 +141,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
         updateMaterialParams,
         updateTrigger,
         setInitialId,
+        isLoading,
       }}
     >
       {children}

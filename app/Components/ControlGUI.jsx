@@ -49,8 +49,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { useRouter } from "next/navigation";
 
 const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
-  const { connectedMaps, materialParams, updateConnectedMaps } =
-    useContext(MapContext);
+  const { connectedMaps, materialParams } = useContext(MapContext);
   const [open, setOpen] = useState(true);
   const [selectedIcon, setSelectedIcon] = useState("materials");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -220,10 +219,15 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
           formData.append(paramName, value);
         }
 
-        for (const [mapType, file] of Object.entries(connectedMaps)) {
-          if (file) {
+        for (const [mapType, mapSource] of Object.entries(connectedMaps)) {
+          if (mapSource instanceof File) {
+            // If it's a file (user-uploaded), append it as a file
             const formKey = `${mapType.toLowerCase()}MapUrl`;
-            formData.append(formKey, file);
+            formData.append(formKey, mapSource);
+          } else if (typeof mapSource === "string") {
+            // If it's a URL (from the API), append it as a URL
+            const formKey = `${mapType.toLowerCase()}MapUrl`;
+            formData.append(formKey, mapSource);
           }
         }
 

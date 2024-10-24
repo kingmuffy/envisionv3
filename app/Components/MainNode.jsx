@@ -3,7 +3,9 @@
 import React from "react";
 import { Handle, Position } from "reactflow";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { Tooltip } from "@mui/material";
+import { Tooltip, Switch, IconButton } from "@mui/material";
+import ReplayIcon from "@mui/icons-material/Replay"; // Reset icon
+import ImageIcon from "@mui/icons-material/Image"; // Thumbnail placeholder
 
 const mapInfo = {
   Diffuse: "Defines the base color of the material.",
@@ -21,7 +23,12 @@ const mapInfo = {
   Clearcoat: "Adds a clear coat to the material.",
 };
 
-const MainNode = ({ data }) => (
+const MainNode = ({
+  data,
+  mapDisabledState,
+  toggleMap,
+  resetMapToInitialized,
+}) => (
   <div
     style={{
       padding: "12px 0px",
@@ -30,7 +37,6 @@ const MainNode = ({ data }) => (
       borderRadius: "12px",
       width: "280px",
       color: "#333",
-
       fontFamily: "Avenir, sans-serif",
       position: "relative",
       boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
@@ -74,8 +80,6 @@ const MainNode = ({ data }) => (
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
             alignItems: "center",
             padding: "12px 15px",
             borderBottom:
@@ -83,39 +87,68 @@ const MainNode = ({ data }) => (
             position: "relative",
           }}
         >
-          <span
-            style={{
-              fontSize: "12px",
-              fontFamily: "Avenir, sans-serif",
-              fontWeight: "bold",
-              display: "flex",
-              alignItems: "center",
-              marginLeft: "5px",
-              color: "#282828",
-              textTransform: "uppercase",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {map}
-            <Tooltip title={mapInfo[map]} arrow>
-              <InfoOutlinedIcon
-                style={{
-                  marginLeft: "15px",
-                  fontSize: "14px",
-                  color: "#DDDDDD",
-                  cursor: "pointer",
-                }}
-              />
-            </Tooltip>
-          </span>
+          {/* Thumbnail placeholder beside each map */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <ImageIcon style={{ color: "#AAAAAA" }} />{" "}
+            {/* Thumbnail placeholder */}
+            <span
+              style={{
+                fontSize: "12px",
+                fontFamily: "Avenir, sans-serif",
+                fontWeight: "bold",
+                color: "#282828",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {map}
+              <Tooltip title={mapInfo[map]} arrow>
+                <InfoOutlinedIcon
+                  style={{
+                    marginLeft: "10px",
+                    fontSize: "14px",
+                    color: "#DDDDDD",
+                    cursor: "pointer",
+                  }}
+                />
+              </Tooltip>
+            </span>
+          </div>
 
+          {/* Toggle Switch for map connection */}
+          <Switch
+            checked={!mapDisabledState[map]} // If map is not disabled, toggle is ON
+            onChange={() => toggleMap(map)} // Toggle function passed in as prop
+            size="small"
+            sx={{
+              "& .MuiSwitch-switchBase.Mui-checked": {
+                color: "#4caf50", // Set thumb color to green when ON
+              },
+              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                backgroundColor: "#4caf50", // Set track color to green when ON
+              },
+            }}
+          />
+
+          {/* Reset IconButton with Material UI icon */}
+          <IconButton
+            onClick={() => {
+              resetMapToInitialized(map); // Reset map to initialized state
+              toggleMap(map); // Toggle the map on after reset
+            }}
+            size="small"
+            sx={{ color: "#4caf50" }} // Set reset icon color to green
+          >
+            <ReplayIcon /> {/* Reset icon */}
+          </IconButton>
+
+          {/* Handle for React Flow connection */}
           <Handle
             type="target"
             position={Position.Left}
             id={`handle-${index}`}
             style={{
               background: "#529D36",
-
               width: "8px",
               height: "8px",
               borderRadius: "50%",
@@ -132,5 +165,3 @@ const MainNode = ({ data }) => (
 );
 
 export default MainNode;
-//v3 - All UI updated
-//v4 with Figma - UI done

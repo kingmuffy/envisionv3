@@ -46,7 +46,31 @@ function FabricPage() {
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
   const [message, setMessage] = useState("");
-  const { updateConnectedMaps, disconnectMap } = useContext(MapContext);
+  const { updateConnectedMaps, disconnectMap, resetMapToInitialized } =
+    useContext(MapContext);
+
+  const [mapDisabledState, setMapDisabledState] = useState({
+    Diffuse: false,
+    Environment: false,
+    Refraction: false,
+    Bump: false,
+    Normal: false,
+    Displacement: false,
+    Clearcoat: false,
+    Emissive: false,
+    Sheen: false,
+    AO: false,
+    Metalness: false,
+    Roughness: false,
+    Anisotropy: false,
+  });
+
+  const previewRef = useRef(null);
+
+  const triggerDeleteModal = (node) => {
+    setSelectedNode(node); // Set the node that should be deleted
+    setModalOpen(true); // Open the modal
+  };
 
   const mainNode = useMemo(
     () => ({
@@ -79,8 +103,6 @@ function FabricPage() {
     setNodes([mainNode]);
   }, [mainNode, setNodes]);
 
-  // Inside FabricPage component
-
   const addMapNode = useCallback(() => {
     const newMapNode = {
       id: `map-${nodes.length + 1}`,
@@ -101,7 +123,7 @@ function FabricPage() {
                   }
                 : node
             );
-            return [...newNodes]; // Ensure the array is copied immutably
+            return [...newNodes];
           });
           const mapNode = nodes.find((node) => node.id === nodeId);
           if (mapNode && mapNode.data.mapType) {
@@ -109,7 +131,6 @@ function FabricPage() {
           }
         },
       },
-      // Add onTriggerDelete function to delete the node
       onTriggerDelete: ({ id, data }) => {
         if (data.mapType) {
           disconnectMap(data.mapType); // Disconnect the map if it's linked
@@ -126,12 +147,33 @@ function FabricPage() {
     };
     setNodes((nds) => [...nds, newMapNode]);
   }, [nodes, setNodes, updateConnectedMaps, disconnectMap]);
-  // Trigger modal to confirm delete when the user clicks the "X" in MapNode
-  const triggerDeleteModal = useCallback((node) => {
-    console.log("Triggering delete modal for node:", node);
-    setSelectedNode(node);
-    setModalOpen(true);
-  }, []);
+
+  const toggleMap = useCallback(
+    (mapType) => {
+      setMapDisabledState((prevState) => {
+        const isMapCurrentlyEnabled = !prevState[mapType];
+
+        if (!isMapCurrentlyEnabled) {
+          // Map is being turned off, remove it
+          if (previewRef.current) {
+            previewRef.current.removeMapFromModel(mapType);
+          }
+        } else {
+          // Map is being turned back on, re-add it
+          if (previewRef.current) {
+            previewRef.current.reconnectMapToModel(mapType);
+          }
+        }
+
+        return {
+          ...prevState,
+          [mapType]: isMapCurrentlyEnabled, // Toggle the disabled state for the map
+        };
+      });
+    },
+    [previewRef]
+  );
+
   const onConnect = useCallback(
     (params) => {
       const sourceNode = nodes.find((node) => node.id === params.source);
@@ -139,22 +181,6 @@ function FabricPage() {
       if (!sourceNode || !sourceNode.data.file) {
         // If no file is uploaded in the source node, show a warning
         setMessage("You must upload a map before connecting nodes.");
-
-        setSnackbarOpen(true);
-        return;
-      }
-
-      // Check if the file is already connected to another map type in any node
-      const isFileAlreadyConnected = nodes.some(
-        (node) =>
-          node.data.mapType &&
-          node.data.file?.name === sourceNode.data.file.name
-      );
-
-      if (isFileAlreadyConnected) {
-        // If the file is already connected, show a warning and prevent connection
-        setMessage("This map is already connected to another node.");
-
         setSnackbarOpen(true);
         return;
       }
@@ -205,12 +231,6 @@ function FabricPage() {
     [nodes, setNodes, setEdges, disconnectMap]
   );
 
-  const onNodeContextMenu = useCallback((event, node) => {
-    event.preventDefault();
-    setSelectedNode(node);
-    setModalOpen(true);
-  }, []);
-
   const confirmDeleteNode = useCallback(() => {
     if (selectedNode) {
       const { id, data } = selectedNode;
@@ -249,13 +269,21 @@ function FabricPage() {
 
   const nodeTypes = useMemo(
     () => ({
-      mainNode: MainNode,
+      mainNode: (props) => (
+        <MainNode
+          {...props}
+          mapDisabledState={mapDisabledState}
+          toggleMap={toggleMap}
+          resetMapToInitialized={resetMapToInitialized} // Pass the reset function
+        />
+      ),
       mapNode: (props) => (
         <MapNode {...props} onTriggerDelete={triggerDeleteModal} />
       ),
     }),
-    [triggerDeleteModal]
+    [mapDisabledState, toggleMap, resetMapToInitialized]
   );
+
   return (
     <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
       {/* Custom Upload Icon */}
@@ -297,6 +325,7 @@ function FabricPage() {
           <Preview
             uploadedModelPath={uploadedModelPath}
             style={{ height: "100%" }}
+            ref={previewRef}
           />
         </div>
 
@@ -310,7 +339,6 @@ function FabricPage() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onNodeContextMenu={onNodeContextMenu}
                 onEdgeDoubleClick={onEdgeDoubleClick}
                 fitView
                 defaultEdgeOptions={{
@@ -357,7 +385,7 @@ function FabricPage() {
           severity="warning"
           sx={{ width: "100%" }}
         >
-          {message}{" "}
+          {message}
         </Alert>
       </Snackbar>
     </div>

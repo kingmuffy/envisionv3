@@ -39,9 +39,9 @@ async function uploadFileToS3(fileBuffer, fileName, contentType) {
 export async function POST(request) {
   try {
     const formData = await request.formData();
-    console.log("Form Data received:", formData);
 
     const fabricData = {
+      // Set all maps to null initially
       diffuseMapUrl: null,
       envMapUrl: null,
       refractionMapUrl: null,
@@ -55,6 +55,7 @@ export async function POST(request) {
       metalnessMapUrl: null,
       roughnessMapUrl: null,
       anisotropyMapUrl: null,
+      // Other material properties
       bumpScale: parseFloat(formData.get("bumpScale")),
       displacementScale: parseFloat(formData.get("displacementScale")),
       emissiveIntensity: parseFloat(formData.get("emissiveIntensity")),
@@ -77,8 +78,6 @@ export async function POST(request) {
       materialName: formData.get("materialName"),
     };
 
-    console.log("Initial fabric data:", fabricData);
-
     const mapTypes = [
       "diffuseMapUrl",
       "envMapUrl",
@@ -97,26 +96,24 @@ export async function POST(request) {
 
     for (const mapType of mapTypes) {
       const file = formData.get(mapType);
+
       if (file && file.size > 0) {
-        console.log(`Processing file for ${mapType}:`, file.name);
+        // If it's a file, upload it to S3
         const fileBuffer = Buffer.from(await file.arrayBuffer());
         const fileName = `${uuidv4()}-${file.name}`;
         const contentType = file.type;
 
         const fileUrl = await uploadFileToS3(fileBuffer, fileName, contentType);
-        fabricData[mapType] = fileUrl;
-      } else {
-        console.log(`No file uploaded for ${mapType}`);
+        fabricData[mapType] = fileUrl; // Store the uploaded file URL
+      } else if (typeof file === "string") {
+        // If it's a URL, save the URL directly
+        fabricData[mapType] = file;
       }
     }
-
-    console.log("Final fabric data before saving to DB:", fabricData);
 
     const savedFabric = await prisma.fabricMap.create({
       data: fabricData,
     });
-
-    console.log("Saved Fabric Data:", savedFabric);
 
     return NextResponse.json({ status: "success", fabric: savedFabric });
   } catch (error) {

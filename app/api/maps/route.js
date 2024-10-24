@@ -5,9 +5,7 @@ const prisma = new PrismaClient();
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    console.log("idedee", id);
+    const id = "671a4573953f9b3190d59cf5";
 
     if (!id) {
       return NextResponse.json(

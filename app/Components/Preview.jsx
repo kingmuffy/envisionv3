@@ -1,8 +1,16 @@
 "use client";
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useContext,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
+import CustomCameraHelper from "./Helper/CustomCameraHelper";
 import {
   MeshPhysicalMaterial,
   TextureLoader,
@@ -14,7 +22,6 @@ import {
   RepeatWrapping,
 } from "three";
 import { LightContext } from "./LightContext";
-import CustomCameraHelper from "./Helper/CustomCameraHelper";
 import { MapContext } from "../MapContext";
 import { CameraContext } from "../Components/CameraContext";
 import {
@@ -27,6 +34,7 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
+// Component to handle camera updates based on active camera index
 const CameraUpdater = () => {
   const { camera } = useThree();
   const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
@@ -48,7 +56,6 @@ const CameraUpdater = () => {
       camera.near = activeCameraSettings.near;
       camera.far = activeCameraSettings.far;
       camera.fov = activeCameraSettings.fov;
-      camera.zoom = activeCameraSettings.zoom || 1;
       camera.updateProjectionMatrix();
       resetUpdateTrigger();
     }
@@ -62,11 +69,10 @@ const PreviewScene = ({ model, setCurrentModel }) => {
 
   useEffect(() => {
     if (model) {
-      console.log("Adding new model to scene", model);
       scene.add(model);
       setCurrentModel(model);
+
       return () => {
-        console.log("Removing model from scene", model);
         scene.remove(model);
         model.traverse((child) => {
           if (child.isMesh) {
@@ -85,8 +91,7 @@ const PreviewScene = ({ model, setCurrentModel }) => {
   return null;
 };
 
-// Main Preview Component
-const Preview = () => {
+const Preview = forwardRef((props, ref) => {
   const { lights } = useContext(LightContext);
   const { connectedMaps, materialParams, updateTrigger } =
     useContext(MapContext);
@@ -98,10 +103,9 @@ const Preview = () => {
   const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
   const fileInputRef = useRef(null);
   const textureLoader = useRef(new TextureLoader()).current;
-  const orbitControlsRef = useRef();
-  const materialRef = useRef(); // Use ref for material to avoid recreating it
 
-  // Load model when path changes
+  const orbitControlsRef = useRef();
+
   useEffect(() => {
     const modelPath = uploadedModelPath || defaultModelPath;
 
@@ -112,10 +116,8 @@ const Preview = () => {
         (loadedModel) => {
           loadedModel.traverse((child) => {
             if (child.isMesh) {
-              if (!materialRef.current) {
-                materialRef.current = createMaterial(); // Create material only once
-              }
-              child.material = materialRef.current;
+              const material = createMaterial();
+              child.material = material;
               child.castShadow = true;
               child.receiveShadow = true;
             }
@@ -132,7 +134,6 @@ const Preview = () => {
     loadModel();
   }, [uploadedModelPath]);
 
-  // Update material properties and textures when model changes
   useEffect(() => {
     if (currentModel) {
       currentModel.traverse((child) => {
@@ -144,34 +145,18 @@ const Preview = () => {
     }
   }, [currentModel, updateTrigger, connectedMaps, materialParams]);
 
-  // Update OrbitControls when active camera changes
   useEffect(() => {
-    if (orbitControlsRef.current && cameras.length > 0) {
-      const activeCameraSettings = cameras[activeCameraIndex].settings;
-
-      orbitControlsRef.current.object.position.set(
-        activeCameraSettings.position.x,
-        activeCameraSettings.position.y,
-        activeCameraSettings.position.z
-      );
-
-      orbitControlsRef.current.target.set(
-        activeCameraSettings.target.x,
-        activeCameraSettings.target.y,
-        activeCameraSettings.target.z
-      );
-
-      orbitControlsRef.current.minDistance =
-        activeCameraSettings.minZoom || 0.1;
-      orbitControlsRef.current.maxDistance = activeCameraSettings.maxZoom || 5;
-      orbitControlsRef.current.maxPolarAngle =
-        activeCameraSettings.maxPolarAngle || Math.PI / 2;
-      orbitControlsRef.current.minPolarAngle =
-        activeCameraSettings.minPolarAngle || 0;
-
-      orbitControlsRef.current.update();
+    if (currentModel && connectedMaps) {
+      Object.keys(connectedMaps).forEach((mapType) => {
+        reconnectMapToModel(mapType); // Apply map from connectedMaps to the model
+      });
     }
-  }, [activeCameraIndex, cameras, orbitControlsRef]);
+  }, [currentModel, connectedMaps]);
+
+  useImperativeHandle(ref, () => ({
+    removeMapFromModel,
+    reconnectMapToModel,
+  }));
 
   const handleCameraSelectChange = (event) => {
     const selectedIndex = event.target.value;
@@ -179,18 +164,44 @@ const Preview = () => {
     handleViewCamera();
   };
 
-  const handleFileUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+  const removeMapFromModel = (mapType) => {
+    if (!currentModel) return;
+
+    currentModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        resetSpecificMap(child.material, mapType);
+      }
+    });
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setUploadedModelPath(url);
-    }
+  const reconnectMapToModel = (mapType) => {
+    const mapData = connectedMaps[mapType];
+    if (!currentModel || !mapData || !mapData.enabled) return;
+
+    currentModel.traverse((child) => {
+      if (child.isMesh && child.material) {
+        let textureUrl = null;
+        const mapSource = mapData?.source;
+
+        if (mapSource instanceof File || mapSource instanceof Blob) {
+          textureUrl = URL.createObjectURL(mapSource);
+        } else if (typeof mapSource === "string") {
+          textureUrl = mapSource;
+        }
+
+        if (textureUrl) {
+          if (mapType.toUpperCase() === "NORMAL") {
+            child.material.normalMap = null;
+          }
+
+          textureLoader.load(textureUrl, (texture) => {
+            assignTextureToMaterial(child.material, mapType, texture);
+          });
+        } else {
+          resetSpecificMap(child.material, mapType);
+        }
+      }
+    });
   };
 
   const createMaterial = () => {
@@ -201,7 +212,6 @@ const Preview = () => {
     });
   };
 
-  // Extract material properties from context
   const extractMaterialProperties = () => {
     const sheenColor = new Color(
       materialParams.sheenColor?.r || 0,
@@ -233,7 +243,13 @@ const Preview = () => {
     };
   };
 
-  // Update material properties and textures
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      updateConnectedMaps("diffuse", file, true);
+    }
+  };
+
   const updateMaterialProperties = (material) => {
     Object.assign(material, extractMaterialProperties());
     material.normalScale = new Vector2(
@@ -248,43 +264,56 @@ const Preview = () => {
     const currentMapTypes = Object.keys(connectedMaps || []);
 
     currentMapTypes.forEach((mapType) => {
-      const file = connectedMaps[mapType];
-      if (file) {
-        textureLoader.load(
-          URL.createObjectURL(file),
-          (texture) => {
-            texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(
-              mapType.toUpperCase()
-            )
-              ? SRGBColorSpace
-              : LinearSRGBColorSpace;
+      const mapData = connectedMaps[mapType];
+      const mapSource = mapData?.source;
+      const isEnabled = mapData?.enabled;
 
-            texture.wrapS = RepeatWrapping;
-            texture.wrapT = RepeatWrapping;
+      if (mapSource && isEnabled) {
+        let textureUrl = null;
 
-            if (mapType.toUpperCase() === "DIFFUSE") {
-              texture.repeat.set(
-                materialParams.scaleX || 1,
-                materialParams.scaleY || 1
+        if (mapSource instanceof File || mapSource instanceof Blob) {
+          textureUrl = URL.createObjectURL(mapSource);
+        } else if (typeof mapSource === "string") {
+          textureUrl = mapSource;
+        }
+
+        if (textureUrl) {
+          textureLoader.load(
+            textureUrl,
+            (texture) => {
+              texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(
+                mapType.toUpperCase()
+              )
+                ? SRGBColorSpace
+                : LinearSRGBColorSpace;
+
+              texture.wrapS = RepeatWrapping;
+              texture.wrapT = RepeatWrapping;
+
+              if (mapType.toUpperCase() === "DIFFUSE") {
+                texture.repeat.set(
+                  materialParams.scaleX || 1,
+                  materialParams.scaleY || 1
+                );
+              }
+
+              texture.anisotropy = Math.min(
+                textureLoader.manager?.renderer?.capabilities?.getMaxAnisotropy() ||
+                  1,
+                materialParams.anisotropy || 1
               );
+
+              texture.needsUpdate = true;
+              assignTextureToMaterial(material, mapType, texture);
+            },
+            undefined,
+            (error) => {
+              console.error(`Failed to load texture for ${mapType}:`, error);
             }
-
-            const maxAnisotropy =
-              textureLoader.manager?.renderer?.capabilities?.getMaxAnisotropy() ||
-              1;
-            texture.anisotropy = Math.min(
-              maxAnisotropy,
-              materialParams.anisotropy || 1
-            );
-
-            texture.needsUpdate = true;
-            assignTextureToMaterial(material, mapType, texture);
-          },
-          undefined,
-          (error) => {
-            console.error(`Failed to load texture for ${mapType}:`, error);
-          }
-        );
+          );
+        } else {
+          resetSpecificMap(material, mapType);
+        }
       } else {
         resetSpecificMap(material, mapType);
       }
@@ -304,6 +333,7 @@ const Preview = () => {
       "ENVIRONMENT",
       "ANISOTROPY",
     ];
+
     allMapTypes.forEach((mapType) => {
       if (!currentMapTypes.includes(mapType)) {
         resetSpecificMap(material, mapType);
@@ -413,7 +443,7 @@ const Preview = () => {
           alignItems: "center",
           cursor: "pointer",
         }}
-        onClick={handleFileUploadClick}
+        onClick={props.handleFileUploadClick}
       >
         <Tooltip title="Upload Model">
           <IconButton component="span">
@@ -426,11 +456,10 @@ const Preview = () => {
         ref={fileInputRef}
         type="file"
         accept=".fbx"
-        onChange={handleFileUpload}
+        onChange={props.handleFileUpload}
         style={{ display: "none" }}
       />
 
-      {/* Main Canvas */}
       <Box sx={{ position: "relative", height: "100%" }}>
         <Canvas
           shadows
@@ -444,7 +473,6 @@ const Preview = () => {
             fov: cameras[activeCameraIndex]?.settings?.fov || 50,
             near: cameras[activeCameraIndex]?.settings?.near || 0.1,
             far: cameras[activeCameraIndex]?.settings?.far || 1000,
-            zoom: cameras[activeCameraIndex]?.settings?.zoom || 1,
           }}
         >
           {lights.map((light) => {
@@ -498,27 +526,16 @@ const Preview = () => {
                 return null;
             }
           })}
-          {/* Render Model */}
+
           {currentModel && (
             <PreviewScene
               model={currentModel}
               setCurrentModel={setCurrentModel}
             />
           )}
-          <gridHelper args={[1000, 1000, "#ffffff", "#555555"]} />
-          <OrbitControls
-            ref={orbitControlsRef}
-            minDistance={cameras[activeCameraIndex]?.settings?.minZoom || 0.1}
-            maxDistance={cameras[activeCameraIndex]?.settings?.maxZoom || 5}
-            minPolarAngle={
-              cameras[activeCameraIndex]?.settings?.minPolarAngle || 0
-            }
-            maxPolarAngle={
-              cameras[activeCameraIndex]?.settings?.maxPolarAngle || Math.PI / 2
-            }
-            enableZoom={true}
-          />
 
+          <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
+          <OrbitControls ref={orbitControlsRef} />
           {cameras.map((camera, index) => (
             <CustomCameraHelper key={index} cameraSettings={camera.settings} />
           ))}
@@ -607,6 +624,6 @@ const Preview = () => {
       </Box>
     </>
   );
-};
+});
 
 export default Preview;

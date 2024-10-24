@@ -42,14 +42,12 @@ const mapTypeMappings = {
   sheenMapUrl: "SHEEN",
 };
 
-// Component to handle camera updates based on active camera index
-
 const Preview = ({ id }) => {
   const { cameras, activeCameraIndex, setActiveCamera, handleViewCamera } =
     useContext(CameraContext);
   const { lights } = useContext(LightContext);
   const { materialParams, updateTrigger } = useContext(MapContext);
-  const [connectedMaps, setConnectedMaps] = useState({});
+  const [connectedMaps, setConnectedMaps] = useState(null);
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
   const defaultModelPath = "/Wood Bros-Askham Large Fabric.fbx";
@@ -57,6 +55,7 @@ const Preview = ({ id }) => {
   const textureLoader = new TextureLoader();
   const orbitControlsRef = useRef();
 
+  // Fetch maps and initialize connectedMaps state
   useEffect(() => {
     const fetchMaps = async (id) => {
       try {
@@ -69,7 +68,7 @@ const Preview = ({ id }) => {
           }
           return acc;
         }, {});
-        setConnectedMaps(initialMaps);
+        setConnectedMaps(initialMaps); // Set the initial maps state
       } catch (error) {
         console.error("Error fetching maps from backend:", error);
       }
@@ -78,7 +77,7 @@ const Preview = ({ id }) => {
     if (id) {
       fetchMaps(id);
     }
-  }, [id, updateTrigger]);
+  }, [id]);
 
   const CameraUpdater = () => {
     const { camera } = useThree();
@@ -136,6 +135,7 @@ const Preview = ({ id }) => {
 
     loadModel();
   }, [uploadedModelPath]);
+
   // Update OrbitControls when active camera changes
   useEffect(() => {
     if (orbitControlsRef.current && cameras.length > 0) {
@@ -161,8 +161,9 @@ const Preview = ({ id }) => {
     handleViewCamera(); // Trigger view update for selected camera
   };
 
+  // Update materials and textures when the model or connected maps change
   useEffect(() => {
-    if (currentModel) {
+    if (currentModel && connectedMaps) {
       currentModel.traverse((child) => {
         if (child.isMesh && child.material) {
           updateMaterialProperties(child.material);
@@ -221,10 +222,9 @@ const Preview = ({ id }) => {
   };
 
   const updateTextures = (material) => {
-    const currentMapTypes = Object.keys(connectedMaps);
+    if (!connectedMaps) return;
 
-    currentMapTypes.forEach((mapType) => {
-      const mapValue = connectedMaps[mapType];
+    Object.entries(connectedMaps).forEach(([mapType, mapValue]) => {
       if (mapValue) {
         if (mapValue.startsWith("data:image")) {
           loadBase64Texture(material, mapType, mapValue);
@@ -244,7 +244,6 @@ const Preview = ({ id }) => {
 
     textureLoader.load(
       proxyUrl,
-
       (texture) => {
         texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(
           mapType.toUpperCase()
@@ -388,7 +387,6 @@ const Preview = ({ id }) => {
                     key={light.id}
                     intensity={light.intensity}
                     skyColor={light.color || "#ffffff"}
-                    // groundColor={light.groundColor || "#0000ff"}
                   />
                 );
               case "SPOT":
