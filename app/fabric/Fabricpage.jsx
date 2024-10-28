@@ -13,6 +13,7 @@ import {
   ReactFlowProvider,
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   useEdgesState,
   useNodesState,
@@ -313,13 +314,19 @@ function FabricPage() {
                 onNodeContextMenu={onNodeContextMenu}
                 onEdgeDoubleClick={onEdgeDoubleClick}
                 fitView
+                proOptions={{ hideAttribution: true }} // This hides the "React Flow" text
                 defaultEdgeOptions={{
                   style: { strokeWidth: 4, stroke: "#333" },
                 }}
                 style={{ height: "100%" }}
               >
                 <Controls />
-                <Background />
+                <Background
+                  id="1"
+                  gap={10}
+                  color="#f1f1f1"
+                  variant={BackgroundVariant.Cross}
+                />{" "}
               </ReactFlow>
             </ReactFlowProvider>
           </div>

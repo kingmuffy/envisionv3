@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useCallback, useState, useEffect } from "react";
 import axios from "axios";
 import * as THREE from "three";
 
@@ -69,24 +69,25 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     };
 
     fetchMaterialParams();
-  }, [materialId]);
+  }, [materialId, updateTrigger]);
 
-  const updateConnectedMaps = (mapType, file) => {
+  // In MapContext
+  // In MapContext
+  const updateConnectedMaps = useCallback((mapType, url) => {
     setConnectedMaps((prev) => ({
       ...prev,
-      [mapType]: file,
+      [mapType]: url,
     }));
-    setUpdateTrigger((prev) => prev + 1);
-  };
+    setUpdateTrigger((prev) => prev + 1); // Ensure immediate re-render
+  }, []);
 
-  const disconnectMap = (mapType) => {
-    setConnectedMaps((prev) => {
-      const updatedMaps = { ...prev };
-      delete updatedMaps[mapType];
-      return updatedMaps;
-    });
-    setUpdateTrigger((prev) => prev + 1);
-  };
+  const disconnectMap = useCallback((mapType) => {
+    setConnectedMaps((prev) => ({
+      ...prev,
+      [mapType]: null, // Set the map URL to null to indicate removal
+    }));
+    setUpdateTrigger((prev) => prev + 1); // Trigger re-render in Preview
+  }, []);
 
   const updateMaterialParams = (param, value) => {
     setMaterialParams((prevParams) => {

@@ -95,6 +95,19 @@ model FabricMap {
   metalnessMapUrl       String?  
   roughnessMapUrl       String?
   anisotropyMapUrl      String?
+  diffuseMapUrll        String?  
+  envMapUrll             String?
+  refractionMapUrll      String?  
+  bumpMapUrll            String?  
+  normalMapUrll          String?  
+  displacementMapUrll    String?  
+  clearcoatMapUrll       String?
+  emissiveMapUrll        String?  
+  sheenMapUrll           String?
+  aoMapUrll              String?  
+  metalnessMapUrll       String?  
+  roughnessMapUrll       String?
+  anisotropyMapUrll      String?
   bumpScale             Float?   
   displacementScale     Float?   
   emissiveIntensity     Float?   
@@ -117,6 +130,7 @@ model FabricMap {
   anisotropy            Float? 
     envvMapUrl             String?
     materialName           String?
+    nullMapUrl            String?
 
 
 }

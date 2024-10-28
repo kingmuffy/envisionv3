@@ -55,6 +55,19 @@ export async function POST(request) {
       metalnessMapUrl: null,
       roughnessMapUrl: null,
       anisotropyMapUrl: null,
+      diffuseMapUrll: null, // Backup fields initialized as null
+      envMapUrll: null,
+      refractionMapUrll: null,
+      bumpMapUrll: null,
+      normalMapUrll: null,
+      displacementMapUrll: null,
+      clearcoatMapUrll: null,
+      emissiveMapUrll: null,
+      sheenMapUrll: null,
+      aoMapUrll: null,
+      metalnessMapUrll: null,
+      roughnessMapUrll: null,
+      anisotropyMapUrll: null,
       bumpScale: parseFloat(formData.get("bumpScale")),
       displacementScale: parseFloat(formData.get("displacementScale")),
       emissiveIntensity: parseFloat(formData.get("emissiveIntensity")),
@@ -95,6 +108,22 @@ export async function POST(request) {
       "anisotropyMapUrl",
     ];
 
+    const backupMapTypes = {
+      diffuseMapUrll: "diffuseMapUrl",
+      envMapUrll: "envMapUrl",
+      refractionMapUrll: "refractionMapUrl",
+      bumpMapUrll: "bumpMapUrl",
+      normalMapUrll: "normalMapUrl",
+      displacementMapUrll: "displacementMapUrl",
+      clearcoatMapUrll: "clearcoatMapUrl",
+      emissiveMapUrll: "emissiveMapUrl",
+      sheenMapUrll: "sheenMapUrl",
+      aoMapUrll: "aoMapUrl",
+      metalnessMapUrll: "metalnessMapUrl",
+      roughnessMapUrll: "roughnessMapUrl",
+      anisotropyMapUrll: "anisotropyMapUrl",
+    };
+
     for (const mapType of mapTypes) {
       const file = formData.get(mapType);
       if (file && file.size > 0) {
@@ -105,6 +134,10 @@ export async function POST(request) {
 
         const fileUrl = await uploadFileToS3(fileBuffer, fileName, contentType);
         fabricData[mapType] = fileUrl;
+        const backupField = Object.keys(backupMapTypes).find(
+          (backupField) => backupMapTypes[backupField] === mapType
+        );
+        if (backupField) fabricData[backupField] = fileUrl;
       } else {
         console.log(`No file uploaded for ${mapType}`);
       }

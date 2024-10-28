@@ -21,6 +21,8 @@ import {
   ListItem,
   ListItemText,
   Avatar,
+  DialogActions,
+  DialogTitle,
   Alert,
   Snackbar,
 } from "@mui/material";
@@ -44,13 +46,14 @@ import LightList from "./Dialog/LightList.jsx";
 import CameraList from "./Dialog/CameraList.jsx";
 import { ChromePicker } from "react-color"; // Import the ChromePicker
 import axios from "axios";
-const ControlGUI = ({ addMapNode, id }) => {
+const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const {
     connectedMaps,
     materialParams,
     updateConnectedMaps,
     updateMaterialParams,
   } = useContext(MapContext);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
   const [open, setOpen] = useState(true);
   const [selectedIcon, setSelectedIcon] = useState("materials");
@@ -99,13 +102,16 @@ const ControlGUI = ({ addMapNode, id }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false); // State to manage dialog visibility
   const [loading, setLoading] = useState(false);
   const [listData, setListData] = useState([]);
-
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpandedPanel(isExpanded ? panel : null);
+  };
   const handleToggle = () => {
     setOpen(!open);
   };
 
   const handleIconSelect = (iconName) => {
     setSelectedIcon(iconName);
+    setShowReactFlow(iconName === "materials");
   };
   const handleDelete = async (id) => {
     try {
@@ -139,7 +145,29 @@ const ControlGUI = ({ addMapNode, id }) => {
     }
     setSnackbarOpen(true);
   };
+  const resetFabricMaps = async () => {
+    try {
+      const response = await axios.put("/api/resetMaps", { id });
+      if (response.data.status === "success") {
+        console.log("Fabric maps reset successfully");
+      } else {
+        console.error("Failed to reset fabric maps:", response.data.message);
+      }
+    } catch (error) {
+      console.error("Error resetting fabric maps:", error);
+    }
+  };
+  const handleResetAndReload = async () => {
+    setConfirmDialogOpen(true);
+  };
 
+  const confirmReset = async () => {
+    setConfirmDialogOpen(false);
+    if (selectedIcon === "materials") {
+      await resetFabricMaps();
+    }
+    window.location.reload();
+  };
   const handleDeletecamera = async (id) => {
     try {
       await axios.delete("/api/deletecamera", { data: { id } });
@@ -415,12 +443,18 @@ const ControlGUI = ({ addMapNode, id }) => {
                       selectedIcon === "materials"
                         ? "darkgreen"
                         : "rgba(255, 255, 255, 0.1)",
+                    outline: "#393A3D",
+                    border: "#393A3D",
                   },
                   "&:focus": {
-                    outline: "none",
+                    outline: "#393A3D",
+                    border: "#393A3D",
+                    boxShadow: "none",
                   },
                   "&:focus-visible": {
-                    outline: "none",
+                    outline: "#393A3D",
+                    border: "#393A3D",
+                    boxShadow: "none",
                   },
                 }}
                 onClick={() => handleIconSelect("materials")}
@@ -673,6 +707,8 @@ const ControlGUI = ({ addMapNode, id }) => {
                   <Accordion
                     disableGutters
                     elevation={0}
+                    expanded={expandedPanel === control}
+                    onChange={handleAccordionChange(control)}
                     sx={{
                       border: "none",
                       padding: "0px",
@@ -764,7 +800,7 @@ const ControlGUI = ({ addMapNode, id }) => {
                             <CustomSlider
                               value={materialParams.scaleX || 1}
                               onChange={handleScaleXChange}
-                              label="Scale X"
+                              label="ScaleX"
                             />
                           </Box>
 
@@ -780,7 +816,7 @@ const ControlGUI = ({ addMapNode, id }) => {
                             <CustomSlider
                               value={materialParams.scaleY || 1}
                               onChange={handleScaleYChange}
-                              label="Scale Y"
+                              label="ScaleY"
                             />
                           </Box>
                         </>
@@ -799,7 +835,7 @@ const ControlGUI = ({ addMapNode, id }) => {
                             <CustomSlider
                               value={materialParams.normalScaleX || 1}
                               onChange={handleNormalXChange}
-                              label="Normal X"
+                              label="NormalX"
                             />
                           </Box>
 
@@ -815,7 +851,7 @@ const ControlGUI = ({ addMapNode, id }) => {
                             <CustomSlider
                               value={materialParams.normalScaleY || 1}
                               onChange={handleNormalYChange}
-                              label="Normal Y"
+                              label="NormalY"
                             />
                           </Box>
                         </>
@@ -1238,6 +1274,7 @@ const ControlGUI = ({ addMapNode, id }) => {
           }}
         >
           <IconButton
+            onClick={handleResetAndReload}
             sx={{
               color: "white",
               padding: "6px",
@@ -1250,6 +1287,27 @@ const ControlGUI = ({ addMapNode, id }) => {
           </IconButton>
 
           {/* Load button */}
+          <Dialog
+            open={confirmDialogOpen}
+            onClose={() => setConfirmDialogOpen(false)}
+          >
+            <DialogTitle>Undo Editing</DialogTitle>
+            <DialogContent>
+              Are you sure you want to undo editing? changes will be lost.
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setConfirmDialogOpen(false)}
+                color="primary"
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmReset} color="secondary">
+                Confirm
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Button
             variant="outlined"
             onClick={handleLoadClick}

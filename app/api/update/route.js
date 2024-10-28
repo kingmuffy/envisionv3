@@ -80,7 +80,10 @@ export async function PUT(request) {
       Anisotropy: "anisotropyMapUrl",
     };
 
-    const fieldToUpdate = mapTypeMappings[mapType];
+    const fieldToUpdate =
+      mapTypeMappings[
+        mapType.charAt(0).toUpperCase() + mapType.slice(1).toLowerCase()
+      ];
     if (!fieldToUpdate) {
       return NextResponse.json(
         { status: "error", message: `Invalid map type: ${mapType}` },
@@ -88,9 +91,10 @@ export async function PUT(request) {
       );
     }
 
-    const updatedFabric = await prisma.fabricMap.update({
+    const updatedFabric = await prisma.fabricMap.upsert({
       where: { id: fabricId },
-      data: { [fieldToUpdate]: fileUrl },
+      update: { [fieldToUpdate]: fileUrl },
+      create: { id: fabricId, [fieldToUpdate]: fileUrl },
     });
 
     console.log("Updated fabric data:", updatedFabric);

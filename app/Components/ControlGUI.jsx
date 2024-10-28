@@ -1506,7 +1506,6 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             Load
           </Button>
 
-          {/* Save button  */}
           <Button
             variant="contained"
             sx={{

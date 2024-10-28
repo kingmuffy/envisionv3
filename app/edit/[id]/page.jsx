@@ -1,5 +1,4 @@
 "use client";
-
 import React, {
   useCallback,
   useState,
@@ -13,15 +12,18 @@ import Preview from "../../Components/EditPreview";
 import {
   ReactFlowProvider,
   ReactFlow,
-  Background,
   Controls,
   useEdgesState,
   useNodesState,
   addEdge,
+  Background,
+  BackgroundVariant,
 } from "reactflow";
+// import { Background, BackgroundVariant } from "@xyflow/react";
+
 import "reactflow/dist/style.css";
 import MainNode from "../../Components/Editmainnode";
-import MapNode from "../../Components/EditMapNode";
+import EditMapNode from "../../Components/EditMapNode";
 import ControlGUI from "../../Components/EditControl";
 import { MapContext } from "../../EditContext";
 import { Snackbar, Alert, IconButton, Box } from "@mui/material";
@@ -34,8 +36,10 @@ function FabricPage({ params }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Track custom messages for Snackbar
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [currentModel, setCurrentModel] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null); // For tracking selected node
+  const [showReactFlow, setShowReactFlow] = useState(true);
 
   const fileInputRef = useRef(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
@@ -45,13 +49,46 @@ function FabricPage({ params }) {
   if (!mapContext) {
     throw new Error("MapContext must be used within a MapProvider");
   }
-
-  const { updateConnectedMaps, setInitialId } = mapContext;
+  const { updateConnectedMaps, disconnectMap, setInitialId } = mapContext;
 
   // Callback to receive currentModel from Preview
   const handleModelLoaded = useCallback((model) => {
     setCurrentModel(model); // Store the current model for future use
   }, []);
+
+  const handleNodeDelete = useCallback(
+    async (node) => {
+      const { mapType, fabricId } = node.data;
+
+      try {
+        const formData = new FormData();
+        formData.append("fabricId", fabricId);
+        formData.append("mapType", mapType);
+
+        const response = await axios.put("/api/updateMapUrlToNull", formData);
+
+        if (response.status === 200) {
+          setNodes((nds) => nds.filter((n) => n.id !== node.id));
+          setSnackbarMessage(
+            `${mapType} map was disconnected and set to null.`
+          );
+          setSnackbarOpen(true);
+
+          // Disconnect the map in the context as well to ensure it updates in the model
+          disconnectMap(mapType);
+        } else {
+          console.error("Error updating map URL to null:", response);
+          setSnackbarMessage("Failed to update map URL.");
+          setSnackbarOpen(true);
+        }
+      } catch (error) {
+        console.error("Error updating map URL to null:", error);
+        setSnackbarMessage("Failed to update map URL.");
+        setSnackbarOpen(true);
+      }
+    },
+    [setNodes, disconnectMap]
+  );
 
   useEffect(() => {
     if (id) {
@@ -128,7 +165,7 @@ function FabricPage({ params }) {
           targetHandle: `handle-${mapNode.data.mapType.toLowerCase()}`, // Use the correct handle ID
           animated: true,
           data: {
-            mapType: mapNode.data.mapType, // Attach the mapType to the edge
+            mapType: mapNode.data.mapType,
           },
         }))
       );
@@ -158,6 +195,7 @@ function FabricPage({ params }) {
           "Metalness",
           "Roughness",
           "Anisotropy",
+          { name: "Nulle", isHidden: true },
         ],
       },
     }),
@@ -167,66 +205,144 @@ function FabricPage({ params }) {
   useEffect(() => {
     setNodes([mainNode]);
   }, [mainNode]);
+  const addMapNode = useCallback(
+    (mapType) => {
+      const newNode = {
+        id: `map-${nodes.length + 1}`,
+        type: "mapNode",
+        position: {
+          x: Math.random() * 150 + 150,
+          y: Math.random() * 250 + 50,
+        },
+        data: {
+          label: `New Map ${nodes.length + 1}`,
+          mapType: mapType || "nulle",
+          fabricId: id,
 
-  const addMapNode = useCallback(() => {
-    setSnackbarMessage(
-      "You are currently in editing mode. You can only reassign a map, but not create new nodes."
-    );
-    setSnackbarOpen(true);
-  }, []);
+          updateNodeData: (nodeId, file, thumbnail) => {
+            setNodes((nds) =>
+              nds.map((node) =>
+                node.id === nodeId
+                  ? {
+                      ...node,
+                      data: { ...node.data, thumbnail, file, label: file.name },
+                    }
+                  : node
+              )
+            );
+            updateConnectedMaps(mapType, file);
+          },
+        },
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [nodes, id, setNodes, updateConnectedMaps]
+  );
 
   const onConnect = useCallback(
     (params) => {
+      const targetMapType = params.targetHandle
+        ?.replace("handle-", "")
+        .toUpperCase();
       const sourceNode = nodes.find((node) => node.id === params.source);
-      if (!sourceNode || !sourceNode.data.file) {
-        setSnackbarMessage("You must upload a map before connecting nodes.");
+
+      const hasExistingConnection = edges.some(
+        (edge) => edge.source === params.source
+      );
+
+      if (hasExistingConnection) {
+        setSnackbarMessage(
+          "This node is already connected. Multiple connections are not allowed."
+        );
         setSnackbarOpen(true);
         return;
       }
 
-      const targetNode = nodes.find((node) => node.id === params.target);
-      const targetMapType = params.targetHandle
-        ?.replace("handle-", "")
-        .toUpperCase(); // Extract the map type from handle ID
-
-      if (targetMapType) {
-        const mapNodeId = params.source;
-
+      if (sourceNode && targetMapType) {
         setNodes((nds) =>
           nds.map((node) =>
-            node.id === mapNodeId
-              ? { ...node, data: { ...node.data, mapType: targetMapType } }
+            node.id === sourceNode.id
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    mapType: targetMapType,
+                    label: targetMapType,
+                  },
+                }
               : node
           )
         );
 
-        updateConnectedMaps(targetMapType, sourceNode.data.file);
-
         setEdges((eds) =>
           addEdge(
-            { ...params, animated: true, data: { mapType: targetMapType } },
+            {
+              ...params,
+              animated: true,
+              data: { mapType: targetMapType },
+            },
             eds
           )
         );
+
+        if (sourceNode.data.file) {
+          updateConnectedMaps(targetMapType, sourceNode.data.file);
+        } else {
+          console.warn(
+            "A file has not been uploaded yet, but nodes are connected."
+          );
+        }
       }
     },
-    [nodes, setNodes, setEdges, updateConnectedMaps]
+    [nodes, edges, setEdges, updateConnectedMaps]
   );
 
-  const onEdgeDoubleClick = useCallback((event) => {
-    event.stopPropagation();
-    setSnackbarMessage(
-      "You are currently in editing mode. Disconnecting edges is not allowed."
-    );
-    setSnackbarOpen(true);
-  }, []);
+  const onEdgeDoubleClick = useCallback(
+    (event, edge) => {
+      event.stopPropagation();
+      setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+      setSnackbarMessage("Edge deleted.");
+      setSnackbarOpen(true);
+    },
+    [setEdges]
+  );
 
-  const onEdgesDelete = useCallback(() => {
-    setSnackbarMessage(
-      "You are currently in editing mode. Deleting edges is not allowed."
-    );
-    setSnackbarOpen(true);
-  }, []);
+  const onEdgesDelete = useCallback(
+    (deletedEdges) => {
+      setEdges((eds) =>
+        eds.filter(
+          (edge) =>
+            !deletedEdges.find((deletedEdge) => deletedEdge.id === edge.id)
+        )
+      );
+
+      deletedEdges.forEach((edge) => {
+        const targetMapType = edge.data.mapType;
+        updateConnectedMaps(targetMapType, null);
+      });
+
+      setSnackbarMessage("Edge deleted successfully.");
+      setSnackbarOpen(true);
+    },
+    [setEdges, updateConnectedMaps]
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event, node) => {
+      event.preventDefault();
+      const nodeId = node.id;
+
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) =>
+        eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+      );
+
+      setSnackbarMessage("Node deleted.");
+      setSnackbarOpen(true);
+    },
+    [setNodes, setEdges]
+  );
 
   const closeSnackbar = () => setSnackbarOpen(false);
 
@@ -245,8 +361,13 @@ function FabricPage({ params }) {
   };
 
   const nodeTypes = useMemo(
-    () => ({ mainNode: MainNode, mapNode: MapNode }),
-    []
+    () => ({
+      mainNode: MainNode,
+      mapNode: (nodeProps) => (
+        <EditMapNode {...nodeProps} handleNodeDelete={handleNodeDelete} />
+      ),
+    }),
+    [handleNodeDelete]
   );
 
   return (
@@ -278,8 +399,11 @@ function FabricPage({ params }) {
 
       <Split
         className="split-container"
-        sizes={[50, 50]}
+        sizes={showReactFlow ? [50, 50] : [100, 0]}
         minSize={100}
+        direction="horizontal"
+        gutterSize={10}
+        cursor="col-resize"
         style={{ height: "100vh" }}
       >
         <div style={{ height: "100%", overflow: "hidden" }}>
@@ -290,39 +414,44 @@ function FabricPage({ params }) {
             onModelLoaded={handleModelLoaded}
           />
         </div>
-        <div style={{ height: "100%", overflow: "hidden" }}>
-          <ReactFlowProvider>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onEdgesDelete={onEdgesDelete}
-              onNodeContextMenu={(event) => {
-                event.preventDefault();
-                setSnackbarMessage(
-                  "You are currently in editing mode. Deleting nodes is not allowed."
-                );
-                setSnackbarOpen(true);
-              }}
-              onEdgeDoubleClick={onEdgeDoubleClick}
-              fitView
-              defaultEdgeOptions={{ style: { strokeWidth: 4, stroke: "#333" } }}
-              style={{ height: "100%" }}
-            >
-              <Controls />
-              <Background />
-            </ReactFlow>
-          </ReactFlowProvider>
-        </div>
+        {showReactFlow && (
+          <div style={{ flexGrow: 1, height: "100%", position: "relative" }}>
+            <ReactFlowProvider>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onEdgesDelete={onEdgesDelete}
+                onNodeContextMenu={onNodeContextMenu}
+                onNodeDoubleClick={(event, node) => handleNodeDelete(node)}
+                fitView
+                proOptions={{ hideAttribution: true }}
+                defaultEdgeOptions={{
+                  style: { strokeWidth: 4, stroke: "#333" },
+                }}
+                style={{ height: "100%" }}
+              >
+                <Controls />
+                <Background
+                  id="1"
+                  gap={10}
+                  color="#f1f1f1"
+                  variant={BackgroundVariant.Cross}
+                />
+              </ReactFlow>
+            </ReactFlowProvider>
+          </div>
+        )}
       </Split>
 
       <ControlGUI
         id={id}
         addMapNode={addMapNode}
         style={{ height: "100vh", position: "absolute", top: 0 }}
+        setShowReactFlow={setShowReactFlow}
       />
 
       <Snackbar
@@ -333,6 +462,7 @@ function FabricPage({ params }) {
         <Alert
           onClose={closeSnackbar}
           severity="warning"
+          addMapNode
           sx={{ width: "100%" }}
         >
           {snackbarMessage}

@@ -42,8 +42,65 @@ const mapTypeMappings = {
   sheenMapUrl: "SHEEN",
 };
 
-// Component to handle camera updates based on active camera index
+const CameraUpdater = () => {
+  const { camera } = useThree();
+  const { cameras, activeCameraIndex, updateTrigger, resetUpdateTrigger } =
+    useContext(CameraContext);
 
+  useEffect(() => {
+    if (updateTrigger && cameras.length > 0) {
+      const activeCameraSettings = cameras[activeCameraIndex].settings;
+      camera.position.set(
+        activeCameraSettings.position.x,
+        activeCameraSettings.position.y,
+        activeCameraSettings.position.z
+      );
+      camera.lookAt(
+        activeCameraSettings.target.x,
+        activeCameraSettings.target.y,
+        activeCameraSettings.target.z
+      );
+      camera.near = activeCameraSettings.near;
+      camera.far = activeCameraSettings.far;
+      camera.fov = activeCameraSettings.fov;
+      camera.zoom = activeCameraSettings.zoom || 1;
+      camera.updateProjectionMatrix();
+      resetUpdateTrigger();
+    }
+  }, [cameras, activeCameraIndex, updateTrigger, camera, resetUpdateTrigger]);
+
+  return null;
+};
+
+const PreviewScene = ({ model, setCurrentModel }) => {
+  const { scene } = useThree();
+
+  useEffect(() => {
+    if (model) {
+      console.log("Adding new model to scene", model);
+      scene.add(model);
+      setCurrentModel(model);
+      return () => {
+        console.log("Removing model from scene", model);
+        scene.remove(model);
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach((material) => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      };
+    }
+  }, [model, scene, setCurrentModel]);
+
+  return null;
+};
+
+// Component to handle camera updates based on active camera index
 const Preview = ({ id }) => {
   const { cameras, activeCameraIndex, setActiveCamera, handleViewCamera } =
     useContext(CameraContext);
@@ -62,13 +119,14 @@ const Preview = ({ id }) => {
       try {
         const response = await axios.get(`/api/maps?id=${id}`);
         const data = response.data.map;
+
+        // Map fetched data to your connected maps state
         const initialMaps = Object.keys(data).reduce((acc, key) => {
           const mapType = mapTypeMappings[key];
-          if (mapType && data[key]) {
-            acc[mapType] = data[key];
-          }
+          acc[mapType] = data[key] || null; // Set to null if the map is missing
           return acc;
         }, {});
+
         setConnectedMaps(initialMaps);
       } catch (error) {
         console.error("Error fetching maps from backend:", error);
@@ -136,6 +194,7 @@ const Preview = ({ id }) => {
 
     loadModel();
   }, [uploadedModelPath]);
+
   // Update OrbitControls when active camera changes
   useEffect(() => {
     if (orbitControlsRef.current && cameras.length > 0) {
@@ -154,13 +213,6 @@ const Preview = ({ id }) => {
     }
   }, [activeCameraIndex, cameras]);
 
-  // Handle camera change from dropdown
-  const handleCameraSelectChange = (event) => {
-    const selectedIndex = event.target.value;
-    setActiveCamera(selectedIndex);
-    handleViewCamera(); // Trigger view update for selected camera
-  };
-
   useEffect(() => {
     if (currentModel) {
       currentModel.traverse((child) => {
@@ -178,6 +230,11 @@ const Preview = ({ id }) => {
       side: DoubleSide,
       ...extractMaterialProperties(),
     });
+  };
+  const handleCameraSelectChange = (event) => {
+    const selectedIndex = event.target.value;
+    setActiveCamera(selectedIndex);
+    handleViewCamera(); // Trigger view update for selected camera
   };
 
   const extractMaterialProperties = () => {
@@ -226,13 +283,9 @@ const Preview = ({ id }) => {
     currentMapTypes.forEach((mapType) => {
       const mapValue = connectedMaps[mapType];
       if (mapValue) {
-        if (mapValue.startsWith("data:image")) {
-          loadBase64Texture(material, mapType, mapValue);
-        } else {
-          loadUrlTexture(material, mapType, mapValue);
-        }
+        loadUrlTexture(material, mapType, mapValue);
       } else {
-        resetSpecificMap(material, mapType);
+        resetSpecificMap(material, mapType); // Reset the map if it is null
       }
     });
 
@@ -244,7 +297,6 @@ const Preview = ({ id }) => {
 
     textureLoader.load(
       proxyUrl,
-
       (texture) => {
         texture.colorSpace = ["DIFFUSE", "EMISSIVE"].includes(
           mapType.toUpperCase()
@@ -271,11 +323,6 @@ const Preview = ({ id }) => {
     );
   };
 
-  const loadBase64Texture = (material, mapType, base64Texture) => {
-    const texture = textureLoader.load(base64Texture);
-    assignTextureToMaterial(material, mapType, texture);
-  };
-
   const resetSpecificMap = (material, mapType) => {
     const resetMappings = {
       DIFFUSE: "map",
@@ -291,7 +338,7 @@ const Preview = ({ id }) => {
       ENVIRONMENT: "envMap",
       ANISOTROPY: "anisotropyMap",
     };
-    material[resetMappings[mapType.toUpperCase()]] = null;
+    material[resetMappings[mapType.toUpperCase()]] = null; // Reset to null
     material.needsUpdate = true;
   };
 
@@ -388,7 +435,6 @@ const Preview = ({ id }) => {
                     key={light.id}
                     intensity={light.intensity}
                     skyColor={light.color || "#ffffff"}
-                    // groundColor={light.groundColor || "#0000ff"}
                   />
                 );
               case "SPOT":
@@ -410,9 +456,25 @@ const Preview = ({ id }) => {
                 return null;
             }
           })}
-          {currentModel && <primitive object={currentModel} />}
+          {currentModel && (
+            <PreviewScene
+              model={currentModel}
+              setCurrentModel={setCurrentModel}
+            />
+          )}{" "}
           <gridHelper args={[100, 100, "#ffffff", "#555555"]} />
-          <OrbitControls ref={orbitControlsRef} />
+          <OrbitControls
+            ref={orbitControlsRef}
+            minDistance={cameras[activeCameraIndex]?.settings?.minZoom || 0.1}
+            maxDistance={cameras[activeCameraIndex]?.settings?.maxZoom || 5}
+            minPolarAngle={
+              cameras[activeCameraIndex]?.settings?.minPolarAngle || 0
+            }
+            maxPolarAngle={
+              cameras[activeCameraIndex]?.settings?.maxPolarAngle || Math.PI / 2
+            }
+            enableZoom={true}
+          />{" "}
           {cameras.map((camera, index) => (
             <CustomCameraHelper key={index} cameraSettings={camera.settings} />
           ))}{" "}

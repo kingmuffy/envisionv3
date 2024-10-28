@@ -20,7 +20,6 @@ const mapInfo = {
   Roughness: "Determines the smoothness of the surface.",
   Clearcoat: "Adds a clear coat to the material.",
 };
-
 const MainNode = ({ data }) => (
   <div
     style={{
@@ -67,64 +66,72 @@ const MainNode = ({ data }) => (
         paddingRight: "15px",
       }}
     >
-      {data.maps.map((map, index) => (
-        <div
-          key={index}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            fontFamily: "Avenir, sans-serif",
-            fontWeight: "bold",
-            alignItems: "center",
-            padding: "12px 15px",
-            borderBottom:
-              index !== data.maps.length - 1 ? "1px solid #e0e0e0" : "none",
-            position: "relative",
-          }}
-        >
-          <span
+      {data.maps.map((map, index) => {
+        const mapName = typeof map === "string" ? map : map.name;
+        const isHidden = typeof map === "object" && map.isHidden;
+
+        // Skip hidden maps
+        if (isHidden) return null;
+
+        return (
+          <div
+            key={index}
             style={{
-              fontSize: "12px",
+              display: "flex",
+              justifyContent: "space-between",
               fontFamily: "Avenir, sans-serif",
               fontWeight: "bold",
-              display: "flex",
               alignItems: "center",
-              marginLeft: "5px",
-              color: "#282828",
-              textTransform: "uppercase",
-              letterSpacing: "0.02em",
+              padding: "12px 15px",
+              borderBottom:
+                index !== data.maps.length - 1 ? "1px solid #e0e0e0" : "none",
+              position: "relative",
             }}
           >
-            {map}
-            <Tooltip title={mapInfo[map]} arrow>
-              <InfoOutlinedIcon
-                style={{
-                  marginLeft: "15px",
-                  fontSize: "14px",
-                  color: "#DDDDDD",
-                  cursor: "pointer",
-                }}
-              />
-            </Tooltip>
-          </span>
+            <span
+              style={{
+                fontSize: "12px",
+                fontFamily: "Avenir, sans-serif",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                marginLeft: "5px",
+                color: "#282828",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {mapName}
+              <Tooltip title={mapInfo[mapName]} arrow>
+                <InfoOutlinedIcon
+                  style={{
+                    marginLeft: "15px",
+                    fontSize: "14px",
+                    color: "#DDDDDD",
+                    cursor: "pointer",
+                  }}
+                />
+              </Tooltip>
+            </span>
 
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={`handle-${map.toLowerCase()}`} // Use map type as handle identifier
-            style={{
-              background: "#529D36",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              position: "absolute",
-              left: "2px",
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          />
-        </div>
-      ))}
+            <Handle
+              type="target"
+              position={Position.Left}
+              id={`handle-${mapName.toLowerCase()}`} // Use map name as handle identifier if it's an object
+              style={{
+                background: "#529D36",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                position: "absolute",
+                left: "2px",
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   </div>
 );
