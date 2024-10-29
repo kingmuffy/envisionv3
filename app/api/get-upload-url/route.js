@@ -14,16 +14,15 @@ export async function POST(request) {
   const { fileName, fileType } = await request.json();
 
   try {
-    // Generate a unique file name
     const key = `uploads/${Date.now()}-${fileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.NEXT_AWS_S3_BUCKET_NAME,
       Key: key,
       ContentType: fileType,
+      ACL: "public-read", // Ensures uploaded file is public after upload
     });
 
-    // Generate a signed URL
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
     return NextResponse.json({ url });

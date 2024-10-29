@@ -191,39 +191,19 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     setSnackbarOpen(true);
   };
   const handleSave = async () => {
-    if (
-      (selectedIcon === "materials" && !materialName.trim()) ||
-      (selectedIcon === "sun" && !lightSceneName.trim()) ||
-      (selectedIcon === "camera" && !cameraSceneName.trim())
-    ) {
-      const message =
-        selectedIcon === "materials"
-          ? "No material name entered, cannot save."
-          : selectedIcon === "sun"
-          ? "Please enter a name for the light scene."
-          : selectedIcon === "camera"
-          ? "Please enter a name for the camera scene."
-          : "No name entered, cannot save.";
-
-      setSnackbarMessage(message);
-      setSnackbarOpen(true);
-      return;
-    }
-
     try {
       if (selectedIcon === "materials") {
         const formData = new FormData();
         formData.append("materialName", materialName);
 
-        // Add other material parameters to formData
+        // Add material params
         for (const [paramName, value] of Object.entries(materialParams)) {
           formData.append(paramName, value);
         }
 
-        // Process each map file in connectedMaps
         for (const [mapType, file] of Object.entries(connectedMaps)) {
           if (file) {
-            // Step 1: Request a signed URL from the API
+            // Step 1: Request signed URL
             const res = await fetch("/api/get-upload-url", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -234,39 +214,32 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             });
             const data = await res.json();
 
+            console.log("Signed URL:", data.url); // Log URL for verification
+
             if (!data.url) throw new Error("Failed to retrieve upload URL");
 
-            // Step 2: Upload the file to the signed URL
-            await fetch(data.url, {
+            // Step 2: Upload file
+            const uploadRes = await fetch(data.url, {
               method: "PUT",
               headers: { "Content-Type": file.type },
               body: file,
             });
 
-            // Step 3: Append the public URL to formData (removing the query string)
+            if (!uploadRes.ok) {
+              throw new Error(`Upload failed with status: ${uploadRes.status}`);
+            }
+
+            // Step 3: Add file URL to formData
             formData.append(mapType, data.url.split("?")[0]);
           }
         }
 
-        // Step 4: Submit the formData with file URLs to the main API
+        // Step 4: Send formData to main API
         const response = await axios.post("/api/fabric", formData);
-
         if (response.data.status === "success") {
           setSnackbarMessage("Fabric data saved successfully!");
         } else {
           setSnackbarMessage("Failed to save fabric data.");
-        }
-        setSnackbarOpen(true);
-      } else if (selectedIcon === "sun") {
-        await handleSaveLights(lightSceneName);
-        setSnackbarMessage("Light settings saved successfully!");
-        setSnackbarOpen(true);
-      } else if (selectedIcon === "camera") {
-        const response = await saveCameraSettings(cameraSceneName);
-        if (response.status === "success") {
-          setSnackbarMessage("Camera settings saved successfully!");
-        } else {
-          setSnackbarMessage("Failed to save camera settings.");
         }
         setSnackbarOpen(true);
       }
