@@ -9,7 +9,6 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.NEXT_AWS_S3_SECRET_ACCESS_KEY,
   },
 });
-
 export async function POST(request) {
   const { fileName, fileType } = await request.json();
 
@@ -20,11 +19,12 @@ export async function POST(request) {
       Bucket: process.env.NEXT_AWS_S3_BUCKET_NAME,
       Key: key,
       ContentType: fileType,
-      ACL: "public-read", // Ensures uploaded file is public after upload
+      // Remove ACL here for debugging purposes
     });
 
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
+    console.log("Generated Signed URL:", url); // For debugging
     return NextResponse.json({ url });
   } catch (error) {
     console.error("Error generating signed URL:", error);

@@ -214,11 +214,13 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             });
             const data = await res.json();
 
-            console.log("Signed URL:", data.url); // Log URL for verification
+            if (!data.url) {
+              throw new Error("Failed to retrieve upload URL");
+            }
 
-            if (!data.url) throw new Error("Failed to retrieve upload URL");
+            console.log("Signed URL:", data.url); // Log URL for debugging
 
-            // Step 2: Upload file
+            // Step 2: Upload file with ACL public-read if required
             const uploadRes = await fetch(data.url, {
               method: "PUT",
               headers: { "Content-Type": file.type },
@@ -226,10 +228,11 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             });
 
             if (!uploadRes.ok) {
+              console.error(`Upload failed with status: ${uploadRes.status}`);
               throw new Error(`Upload failed with status: ${uploadRes.status}`);
             }
 
-            // Step 3: Add file URL to formData
+            // Step 3: Add the file URL to formData for the main API request
             formData.append(mapType, data.url.split("?")[0]);
           }
         }
