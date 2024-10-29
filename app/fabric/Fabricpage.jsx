@@ -140,22 +140,6 @@ function FabricPage() {
       if (!sourceNode || !sourceNode.data.file) {
         // If no file is uploaded in the source node, show a warning
         setMessage("You must upload a map before connecting nodes.");
-
-        setSnackbarOpen(true);
-        return;
-      }
-
-      // Check if the file is already connected to another map type in any node
-      const isFileAlreadyConnected = nodes.some(
-        (node) =>
-          node.data.mapType &&
-          node.data.file?.name === sourceNode.data.file.name
-      );
-
-      if (isFileAlreadyConnected) {
-        // If the file is already connected, show a warning and prevent connection
-        setMessage("This map is already connected to another node.");
-
         setSnackbarOpen(true);
         return;
       }
@@ -168,17 +152,29 @@ function FabricPage() {
 
       if (targetMapType) {
         const mapNodeId = params.source;
+
+        // Update the mapType to allow multiple connections by storing it as an array
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
-              ? { ...node, data: { ...node.data, mapType: targetMapType } }
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    mapType: Array.isArray(node.data.mapType)
+                      ? [...new Set([...node.data.mapType, targetMapType])] // Add new mapType if it’s not already connected
+                      : [targetMapType],
+                  },
+                }
               : node
           )
         );
 
+        // Update each map type individually in the connected maps context
         updateConnectedMaps(targetMapType, sourceNode.data.file);
       }
 
+      // Add the new edge connection
       setEdges((eds) => addEdge({ ...params, animated: true }, eds));
     },
     [nodes, setNodes, setEdges, updateConnectedMaps]
