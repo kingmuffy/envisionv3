@@ -190,8 +190,8 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     }
     setSnackbarOpen(true);
   };
+
   const handleSave = async () => {
-    // Validation check for required fields based on selected icon
     if (
       (selectedIcon === "materials" && !materialName.trim()) ||
       (selectedIcon === "sun" && !lightSceneName.trim()) ||
@@ -216,40 +216,17 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         const formData = new FormData();
         formData.append("materialName", materialName);
 
-        // Add other material parameters to formData
         for (const [paramName, value] of Object.entries(materialParams)) {
           formData.append(paramName, value);
         }
 
-        // Process each map file in connectedMaps
         for (const [mapType, file] of Object.entries(connectedMaps)) {
           if (file) {
-            // Step 1: Request a signed URL from the API
-            const res = await fetch("/api/get-upload-url", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                fileName: file.name,
-                fileType: file.type,
-              }),
-            });
-            const data = await res.json();
-
-            if (!data.url) throw new Error("Failed to retrieve upload URL");
-
-            // Step 2: Upload the file to the signed URL
-            await fetch(data.url, {
-              method: "PUT",
-              headers: { "Content-Type": file.type },
-              body: file,
-            });
-
-            // Step 3: Append the public URL to formData (removing the query string)
-            formData.append(mapType, data.url.split("?")[0]);
+            const formKey = `${mapType.toLowerCase()}MapUrl`;
+            formData.append(formKey, file);
           }
         }
 
-        // Step 4: Submit the formData with file URLs to the main API
         const response = await axios.post("/api/fabric", formData);
 
         if (response.data.status === "success") {
@@ -257,26 +234,24 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
         } else {
           setSnackbarMessage("Failed to save fabric data.");
         }
-        setSnackbarOpen(true);
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       } else if (selectedIcon === "sun") {
-        // Handle saving for "sun" icon
         await handleSaveLights(lightSceneName);
         setSnackbarMessage("Light settings saved successfully!");
-        setSnackbarOpen(true);
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       } else if (selectedIcon === "camera") {
-        // Handle saving for "camera" icon
         const response = await saveCameraSettings(cameraSceneName);
         if (response.status === "success") {
           setSnackbarMessage("Camera settings saved successfully!");
         } else {
           setSnackbarMessage("Failed to save camera settings.");
         }
-        setSnackbarOpen(true);
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       }
     } catch (error) {
       console.error("Error saving data:", error);
       setSnackbarMessage("Error saving data.");
-      setSnackbarOpen(true);
+      setSnackbarOpen(true); // Ensure snackbar is shown after setting the error message.
     }
   };
 
