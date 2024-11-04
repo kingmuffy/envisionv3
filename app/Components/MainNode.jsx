@@ -1,9 +1,10 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-unused-vars */
-import React from "react";
+import React, { useContext } from "react";
 import { Handle, Position } from "reactflow";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import { Tooltip } from "@mui/material";
+import { Tooltip, Switch } from "@mui/material";
+import { MapContext } from "../MapContext";
 
 const mapInfo = {
   Diffuse: "Defines the base color of the material.",
@@ -19,118 +20,154 @@ const mapInfo = {
   Metalness: "Gives the surface a metallic appearance.",
   Roughness: "Determines the smoothness of the surface.",
   Clearcoat: "Adds a clear coat to the material.",
+  Anisotropy: "Controls the anisotropy of the material.",
 };
 
-const MainNode = ({ data }) => (
-  <div
-    style={{
-      padding: "12px 0px",
-      backgroundColor: "#fff",
-      border: "1px solid #ddd",
-      borderRadius: "12px",
-      width: "280px",
-      color: "#333",
+const mapTypeKeys = {
+  Diffuse: "diffuseMapEnabled",
+  Environment: "environmentMapEnabled",
+  Refraction: "refractionMapEnabled",
+  Bump: "bumpMapEnabled",
+  Normal: "normalMapEnabled",
+  Displacement: "displacementMapEnabled",
+  Emissive: "emissiveMapEnabled",
+  Sheen: "sheenMapEnabled",
+  AO: "aoMapEnabled",
+  Metalness: "metalnessMapEnabled",
+  Roughness: "roughnessMapEnabled",
+  Clearcoat: "clearcoatMapEnabled",
+  Anisotropy: "anisotropyMapEnabled",
+};
 
-      fontFamily: "Avenir, sans-serif",
-      position: "relative",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-    }}
-  >
-    <div>
-      <strong
-        style={{
-          display: "block",
-          width: "100%",
-          height: "40px",
-          marginBottom: "12px",
-          fontSize: "16px",
-          textAlign: "left",
-          color: "#333",
-          fontFamily: "Avenir, sans-serif",
-          fontWeight: "bold",
-          borderBottom: "1px solid #e0e0e0",
-          boxSizing: "border-box",
-          paddingBottom: "5px",
-          paddingLeft: "25px",
-          paddingTop: "5px",
-        }}
-      >
-        {data.label}
-      </strong>
-    </div>
+const MainNode = ({ data }) => {
+  const { materialParams, updateMaterialParams } = useContext(MapContext);
 
+  const handleToggle = (mapKey) => {
+    const paramKey = mapTypeKeys[mapKey];
+    updateMaterialParams(paramKey, !materialParams[paramKey]);
+  };
+
+  return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "6px",
-        paddingLeft: "15px",
-        paddingRight: "15px",
+        padding: "12px 0px",
+        backgroundColor: "#fff",
+        border: "1px solid #ddd",
+        borderRadius: "12px",
+        width: "280px",
+        color: "#333",
+        fontFamily: "Avenir, sans-serif",
+        position: "relative",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
       }}
     >
-      {data.maps.map((map, index) => (
-        <div
-          key={index}
+      <div>
+        <strong
           style={{
-            display: "flex",
-            justifyContent: "space-between",
+            display: "block",
+            width: "100%",
+            height: "40px",
+            marginBottom: "12px",
+            fontSize: "16px",
+            textAlign: "left",
+            color: "#333",
             fontFamily: "Avenir, sans-serif",
             fontWeight: "bold",
-            alignItems: "center",
-            padding: "12px 15px",
-            borderBottom:
-              index !== data.maps.length - 1 ? "1px solid #e0e0e0" : "none",
-            position: "relative",
+            borderBottom: "1px solid #e0e0e0",
+            boxSizing: "border-box",
+            paddingBottom: "5px",
+            paddingLeft: "25px",
+            paddingTop: "5px",
           }}
         >
-          <span
+          {data.label}
+        </strong>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          paddingLeft: "15px",
+          paddingRight: "15px",
+        }}
+      >
+        {data.maps.map((map, index) => (
+          <div
+            key={index}
             style={{
-              fontSize: "12px",
+              display: "flex",
+              justifyContent: "space-between",
               fontFamily: "Avenir, sans-serif",
               fontWeight: "bold",
-              display: "flex",
               alignItems: "center",
-              marginLeft: "5px",
-              color: "#282828",
-              textTransform: "uppercase",
-              letterSpacing: "0.02em",
+              padding: "12px 15px",
+              borderBottom:
+                index !== data.maps.length - 1 ? "1px solid #e0e0e0" : "none",
+              position: "relative",
             }}
           >
-            {map}
-            <Tooltip title={mapInfo[map]} arrow>
-              <InfoOutlinedIcon
-                style={{
-                  marginLeft: "15px",
-                  fontSize: "14px",
-                  color: "#DDDDDD",
-                  cursor: "pointer",
-                }}
-              />
-            </Tooltip>
-          </span>
+            <span
+              style={{
+                fontSize: "12px",
+                fontFamily: "Avenir, sans-serif",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                marginLeft: "5px",
+                color: "#282828",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {map}
+              <Tooltip title={mapInfo[map]} arrow>
+                <InfoOutlinedIcon
+                  style={{
+                    marginLeft: "15px",
+                    fontSize: "14px",
+                    color: "#DDDDDD",
+                    cursor: "pointer",
+                  }}
+                />
+              </Tooltip>
+            </span>
 
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={`handle-${index}`}
-            style={{
-              background: "#529D36",
+            <Switch
+              checked={materialParams[mapTypeKeys[map]]}
+              onChange={() => handleToggle(map)}
+              size="small"
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": {
+                  color: "#529D36",
+                },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: "#529D36",
+                },
+              }}
+            />
 
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              position: "absolute",
-              left: "2px",
-              top: "50%",
-              transform: "translateY(-50%)",
-            }}
-          />
-        </div>
-      ))}
+            <Handle
+              type="target"
+              position={Position.Left}
+              id={`handle-${index}`}
+              style={{
+                background: "#529D36",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                position: "absolute",
+                left: "2px",
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+            />
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default MainNode;
-//v3 - All UI updated
-//v4 with Figma - UI done

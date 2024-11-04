@@ -2,7 +2,6 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { PrismaClient } from "@prisma/client";
-import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 const s3Client = new S3Client({
@@ -13,26 +12,6 @@ const s3Client = new S3Client({
   },
 });
 
-// Helper function for uploading file to S3
-async function uploadFileToS3(fileBuffer, fileName, contentType) {
-  const params = {
-    Bucket: process.env.NEXT_AWS_S3_BUCKET_NAME,
-    Key: fileName,
-    Body: fileBuffer,
-    ContentType: contentType,
-  };
-
-  const command = new PutObjectCommand(params);
-  try {
-    await s3Client.send(command);
-    return `https://${process.env.NEXT_AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${fileName}`;
-  } catch (error) {
-    console.error("Error uploading to S3:", error);
-    throw error;
-  }
-}
-
-// Main API function for handling the POST request
 export async function POST(request) {
   try {
     const formData = await request.formData();
@@ -41,18 +20,32 @@ export async function POST(request) {
     const fabricData = {
       materialName: formData.get("materialName") || null,
       diffuseMapUrl: formData.get("Diffuse") || null,
-      envMapUrl: formData.get("envMapUrl") || null,
-      refractionMapUrl: formData.get("refractionMapUrl") || null,
-      bumpMapUrl: formData.get("bumpMapUrl") || null,
-      normalMapUrl: formData.get("normalMapUrl") || null,
-      displacementMapUrl: formData.get("displacementMapUrl") || null,
-      clearcoatMapUrl: formData.get("clearcoatMapUrl") || null,
-      emissiveMapUrl: formData.get("emissiveMapUrl") || null,
-      sheenMapUrl: formData.get("sheenMapUrl") || null,
-      aoMapUrl: formData.get("aoMapUrl") || null,
-      metalnessMapUrl: formData.get("metalnessMapUrl") || null,
-      roughnessMapUrl: formData.get("roughnessMapUrl") || null,
-      anisotropyMapUrl: formData.get("anisotropyMapUrl") || null,
+      refractionMapUrl: formData.get("Refraction") || null,
+      normalMapUrl: formData.get("Normal") || null,
+      displacementMapUrl: formData.get("Displacement") || null,
+      bumpMapUrl: formData.get("Bump") || null,
+      envMapUrl: formData.get("EnvMap") || null,
+      clearcoatMapUrl: formData.get("Clearcoat") || null,
+      emissiveMapUrl: formData.get("Emissive") || null,
+      sheenMapUrl: formData.get("Sheen") || null,
+      aoMapUrl: formData.get("AO") || null,
+      metalnessMapUrl: formData.get("Metalness") || null,
+      roughnessMapUrl: formData.get("Roughness") || null,
+      anisotropyMapUrl: formData.get("Anisotropy") || null,
+      diffuseMapUrll: formData.get("Diffuse") || null, // Backup fields initialized as null
+      envMapUrll: formData.get("Normal") || null,
+      refractionMapUrll: formData.get("Refraction") || null,
+      bumpMapUrll: formData.get("Bump") || null,
+      normalMapUrll: formData.get("Normal") || null,
+      displacementMapUrll: null,
+      clearcoatMapUrll: null,
+      emissiveMapUrll: null,
+      sheenMapUrll: null,
+      aoMapUrll: null,
+      metalnessMapUrll: null,
+      roughnessMapUrll: null,
+      anisotropyMapUrll: null,
+      // Other numeric and Boolean fields
       bumpScale: parseFloat(formData.get("bumpScale")) || null,
       displacementScale: parseFloat(formData.get("displacementScale")) || null,
       emissiveIntensity: parseFloat(formData.get("emissiveIntensity")) || null,
@@ -64,7 +57,6 @@ export async function POST(request) {
       clearcoat: parseFloat(formData.get("clearcoat")) || null,
       normalScaleX: parseFloat(formData.get("normalScaleX")) || null,
       normalScaleY: parseFloat(formData.get("normalScaleY")) || null,
-      // sheen: formData.get("sheen") === "true",
       fabricName: formData.get("fabricName") || null,
       fabricColor: formData.get("fabricColor") || null,
       envMapIntensity: parseFloat(formData.get("envMapIntensity")) || null,

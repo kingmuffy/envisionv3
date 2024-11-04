@@ -56,6 +56,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const { lights, handleSaveLights } = useContext(LightContext);
+  const [uploadProgress, setUploadProgress] = useState({});
 
   const { updateMaterialParams } = useContext(MapContext);
   //maps state
@@ -80,6 +81,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [sheenRoughness, setSheenRoughness] = useState(1);
   const [sheenColor, setSheenColor] = useState({ r: 1, g: 1, b: 1 });
   const [sheenEnabled, setSheenEnabled] = useState(false);
+  const [diffuseColorEnabled, setDiffuseColorEnabled] = useState(false);
   const [emissiveColor, setEmissiveColor] = useState({ r: 0, g: 0, b: 0 });
   const [anisotropy, setAnisotropy] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -90,9 +92,18 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [cameraSceneName, setCameraSceneName] = useState("");
   const { saveCameraSettings } = useContext(CameraContext);
+  const [ior, setIor] = useState(1.5);
+  const [refractionRatio, setRefractionRatio] = useState(0.98);
+
+  const [expandedPanels, setExpandedPanels] = useState([]);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setExpandedPanel(isExpanded ? panel : null);
+    setExpandedPanels(
+      (prevPanels) =>
+        isExpanded
+          ? [...prevPanels, panel] // Add panel to expanded array
+          : prevPanels.filter((p) => p !== panel) // Remove panel from expanded array if collapsed
+    );
   };
 
   const handleToggle = () => {
@@ -119,6 +130,23 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   //       setSnackbarOpen(true);
   //     });
   // };
+  // State initialization at the top of ControlGUI
+  const handleFresnelColorChange = (color) => {
+    updateMaterialParams("fresnelColor", color.rgb); // Store as {r, g, b}
+  };
+
+  const handleFresnelIntensityChange = (event, newValue) => {
+    updateMaterialParams("fresnelIntensity", newValue);
+  };
+
+  const handleFresnelPowerChange = (event, newValue) => {
+    updateMaterialParams("fresnelPower", newValue);
+  };
+
+  const handleFresnelBiasChange = (event, newValue) => {
+    updateMaterialParams("fresnelBias", newValue);
+  };
+
   const handleMaterialNameChange = (event) => {
     setMaterialName(event.target.value);
   };
@@ -126,6 +154,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     setSelectedIcon(iconName);
     setShowReactFlow(iconName === "materials");
   };
+
   const handleDelete = async (id) => {
     try {
       await axios.delete("/api/delete", { data: { id } });
@@ -203,7 +232,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
 
         for (const [mapType, file] of Object.entries(connectedMaps)) {
           if (file) {
-            // Step 1: Request signed URL
+            // Request signed URL from the backend
             const res = await fetch("/api/get-upload-url", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -218,26 +247,14 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
               throw new Error("Failed to retrieve upload URL");
             }
 
-            console.log("Signed URL:", data.url); // Log URL for debugging
+            console.log("Signed URL:", data.url);
 
-            // Step 2: Upload file with ACL public-read if required
-            const uploadRes = await fetch(data.url, {
-              method: "PUT",
-              headers: { "Content-Type": file.type },
-              body: file,
-            });
-
-            if (!uploadRes.ok) {
-              console.error(`Upload failed with status: ${uploadRes.status}`);
-              throw new Error(`Upload failed with status: ${uploadRes.status}`);
-            }
-
-            // Step 3: Add the file URL to formData for the main API request
-            formData.append(mapType, data.url.split("?")[0]);
+            // Step 2: Use XMLHttpRequest to upload the file to S3
+            await uploadFileWithProgress(data.url, file, mapType, formData);
           }
         }
 
-        // Step 4: Send formData to main API
+        // Step 4: Send formData to the main API
         const response = await axios.post("/api/fabric", formData);
         if (response.data.status === "success") {
           setSnackbarMessage("Fabric data saved successfully!");
@@ -251,6 +268,53 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
       setSnackbarMessage("Error saving data.");
       setSnackbarOpen(true);
     }
+  };
+
+  // Helper function to upload with progress tracking
+  const uploadFileWithProgress = (url, file, mapType, formData) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+
+      xhr.setRequestHeader("Content-Type", file.type);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentCompleted = Math.round(
+            (event.loaded / event.total) * 100
+          );
+          console.log(`${mapType} upload progress: ${percentCompleted}%`);
+
+          setUploadProgress((prev) => ({
+            ...prev,
+            [mapType]: percentCompleted,
+          }));
+
+          // Clear progress after completion
+          if (percentCompleted === 100) {
+            setTimeout(() => {
+              setUploadProgress((prev) => {
+                const { [mapType]: _, ...rest } = prev;
+                return rest;
+              });
+            }, 2000); // 2-second delay before hiding the progress
+          }
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          formData.append(mapType, url.split("?")[0]);
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status: ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Upload failed due to an error"));
+
+      xhr.send(file);
+    });
   };
 
   const handleBumpScaleChange = (event, newValue) => {
@@ -273,6 +337,14 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     updateMaterialParams("scaleX", newValue);
   };
 
+  const handleIorChange = (event, newValue) => {
+    setIor(newValue);
+    updateMaterialParams("ior", newValue);
+  };
+  const handleRefractionRatioChange = (event, newValue) => {
+    setRefractionRatio(newValue);
+    updateMaterialParams("refractionRatio", newValue);
+  };
   const handleScaleYChange = (event, newValue) => {
     setScaleY(newValue);
     updateMaterialParams("scaleY", newValue);
@@ -328,6 +400,9 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     setSheenRoughness(newValue);
     updateMaterialParams("sheenRoughness", newValue);
   };
+  const handleFresnelToggle = () => {
+    updateMaterialParams("fresnelEnabled", !materialParams.fresnelEnabled);
+  };
 
   const handleSheenColorChange = (color) => {
     setSheenColor(color.hex);
@@ -337,11 +412,20 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     setEmissiveColor(color.hex);
     updateMaterialParams("emissiveColor", color.hex);
   };
+  const handleDiffuseColorChange = (color) => {
+    updateMaterialParams("diffuseColor", color.hex);
+  };
 
   const handleSheenToggle = (event) => {
     setSheenEnabled(event.target.checked);
     updateMaterialParams("sheenEnabled", event.target.checked);
   };
+
+  const handleDiffuseColorToggle = (event) => {
+    const isEnabled = event.target.checked;
+    updateMaterialParams("diffuseColorEnabled", isEnabled);
+  };
+
   const handleAnisotropyChange = (event, newValue) => {
     setAnisotropy(newValue);
     updateMaterialParams("anisotropy", newValue);
@@ -758,12 +842,13 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                 "ANISOTROPY",
                 "METALNESS",
                 "ROUGHNESS",
+                "FRESNEL",
               ].map((control) => (
                 <Box key={control}>
                   <Accordion
                     disableGutters
                     elevation={0}
-                    expanded={expandedPanel === control}
+                    expanded={expandedPanels.includes(control)} // Allow multiple open accordions
                     onChange={handleAccordionChange(control)}
                     sx={{
                       border: "none",
@@ -787,10 +872,10 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                           gap: "8px",
                         }}
                       >
-                        {expandedPanel === control ? (
-                          <ExpandMoreIcon sx={{ fontSize: "21px" }} />
+                        {expandedPanels.includes(control) ? (
+                          <ExpandMoreIcon sx={{ fontSize: "21px" }} /> // Downward icon when expanded
                         ) : (
-                          <ChevronRightIcon sx={{ fontSize: "21px" }} />
+                          <ChevronRightIcon sx={{ fontSize: "21px" }} /> // Rightward icon when closed
                         )}
 
                         <Typography
@@ -818,8 +903,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                       sx={{
                         padding: "0px",
                         marginTop: "2px",
-                        maxHeight: "120px",
-                        overflowY: "auto",
+                        overflowY: "visible", // Remove scrolling
                       }}
                     >
                       {control === "BUMP" && (
@@ -845,6 +929,43 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                       )}
                       {control === "DIFFUSE" && (
                         <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              marginBottom: 2,
+                              gap: 2,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: "#333",
+                                marginLeft: "20px",
+                                fontFamily: "Avenir, sans-serif",
+                              }}
+                            >
+                              Enable Diffuse Color
+                            </Typography>
+                            <Switch
+                              checked={materialParams.diffuseColorEnabled}
+                              onChange={handleDiffuseColorToggle}
+                              size="small"
+                              sx={{
+                                "& .MuiSwitch-switchBase.Mui-checked": {
+                                  color: "green",
+                                },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                                  {
+                                    backgroundColor: "green",
+                                  },
+                                "& .MuiSwitch-track": {
+                                  backgroundColor: "#ccc",
+                                },
+                              }}
+                            />
+                          </Box>
+
                           <Box
                             sx={{
                               display: "flex",
@@ -875,6 +996,54 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                               onChange={handleScaleYChange}
                               label="scaleY"
                             />
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                fontWeight: "normal",
+                                color: "#333",
+                                marginRight: "15px",
+                                marginLeft: "10px",
+                              }}
+                            >
+                              Diffuse Color
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "5px",
+                                width: "150px",
+                              }}
+                            >
+                              <ChromePicker
+                                color={materialParams.diffuseColor || "#a26130"}
+                                onChange={(color) =>
+                                  handleDiffuseColorChange(color)
+                                }
+                                styles={{
+                                  default: {
+                                    picker: {
+                                      width: "140px",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                                      border: "1px solid #ccc",
+                                      borderRadius: "6px",
+                                    },
+                                  },
+                                }}
+                              />
+                            </Box>
                           </Box>
                         </>
                       )}
@@ -1073,6 +1242,44 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                               value={envIntensity}
                               onChange={handleEnvIntensityChange}
                               label="E.Intensity"
+                            />
+                          </Box>
+                        </>
+                      )}
+                      {control === "REFRACTION" && (
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={ior}
+                              onChange={handleIorChange}
+                              label="IOR"
+                              min={1}
+                              max={2.5}
+                              step={0.01}
+                            />
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={refractionRatio}
+                              onChange={handleRefractionRatioChange}
+                              label="Refraction Ratio"
+                              min={0}
+                              max={1}
+                              step={0.01}
                             />
                           </Box>
                         </>
@@ -1278,6 +1485,149 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                           </Box>
                         </>
                       )}
+                      {/* Fresnel controls */}
+
+                      {control === "FRESNEL" && (
+                        <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: "#333",
+                                marginLeft: "20px",
+                                fontFamily: "Avenir, sans-serif",
+                              }}
+                            >
+                              Enable Fresnel
+                            </Typography>
+
+                            <Switch
+                              checked={materialParams.fresnelEnabled}
+                              onChange={handleFresnelToggle}
+                              size="small"
+                              sx={{
+                                "& .MuiSwitch-switchBase.Mui-checked": {
+                                  color: "green",
+                                },
+                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                                  {
+                                    backgroundColor: "green",
+                                  },
+                              }}
+                            />
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: "#333",
+                                marginLeft: "20px",
+                                fontFamily: "Avenir, sans-serif",
+                              }}
+                            >
+                              Fresnel Color
+                            </Typography>
+
+                            <Box
+                              sx={{ display: "flex", justifyContent: "center" }}
+                            >
+                              <ChromePicker
+                                color={
+                                  materialParams.fresnelColor || {
+                                    r: 1,
+                                    g: 1,
+                                    b: 1,
+                                  }
+                                }
+                                onChange={handleFresnelColorChange}
+                                disableAlpha
+                                styles={{
+                                  default: {
+                                    picker: {
+                                      width: "140px",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                                      border: "1px solid #ccc",
+                                      borderRadius: "6px",
+                                    },
+                                  },
+                                }}
+                              />
+                            </Box>
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={materialParams.fresnelIntensity || 1.0}
+                              onChange={handleFresnelIntensityChange}
+                              label="Fresnel Intensity"
+                              min={0}
+                              max={5}
+                              step={0.1}
+                            />
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={materialParams.fresnelPower || 2.0}
+                              onChange={handleFresnelPowerChange}
+                              label="Fresnel Power"
+                              min={0}
+                              max={5}
+                              step={0.1}
+                            />
+                          </Box>
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <CustomSlider
+                              value={materialParams.fresnelBias || 0.1}
+                              onChange={handleFresnelBiasChange}
+                              label="Fresnel Bias"
+                              min={0}
+                              max={1}
+                              step={0.01}
+                            />
+                          </Box>
+                        </>
+                      )}
                     </AccordionDetails>
                   </Accordion>
                   <Divider
@@ -1460,7 +1810,16 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
             </Button>
           </DialogContent>
         </Dialog>
-
+        <Box sx={{ padding: "10px", marginBottom: "10px" }}>
+          {Object.entries(uploadProgress).map(([mapType, progress]) => (
+            <Box key={mapType} sx={{ marginBottom: "8px" }}>
+              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                {mapType} Upload: {progress}%
+              </Typography>
+              <progress value={progress} max="100" style={{ width: "100%" }} />
+            </Box>
+          ))}
+        </Box>
         <Box
           sx={{
             display: "flex",

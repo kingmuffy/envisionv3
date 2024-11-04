@@ -8,10 +8,13 @@ const CustomSlider = ({
   min = 0,
   max = 1,
   step = 0.01,
-  onInputChange,
 }) => {
-  const formattedValue =
-    typeof value === "number" && !isNaN(value) ? value.toFixed(2) : "0.00";
+  const handleInputChange = (event) => {
+    const newValue = parseFloat(event.target.value);
+    if (!isNaN(newValue) && newValue >= min && newValue <= max) {
+      onChange(null, newValue); // Call the onChange handler
+    }
+  };
 
   return (
     <Box
@@ -79,8 +82,8 @@ const CustomSlider = ({
       {/* TextField for manual value input */}
       <Box sx={{ paddingLeft: "7px" }}>
         <TextField
-          value={formattedValue} // Using formatted value for 2 decimal places
-          onChange={onInputChange}
+          value={value}
+          onChange={handleInputChange}
           sx={{
             width: "60px",
             "& .MuiInputBase-root": {
@@ -96,6 +99,20 @@ const CustomSlider = ({
             "& .MuiOutlinedInput-notchedOutline": {
               border: "none",
             },
+            "& input[type=number]": {
+              MozAppearance: "textfield",
+            },
+            "& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button":
+              {
+                WebkitAppearance: "none",
+                margin: 0,
+              },
+          }}
+          inputProps={{
+            step: step,
+            min: min,
+            max: max,
+            type: "number",
           }}
         />
       </Box>
