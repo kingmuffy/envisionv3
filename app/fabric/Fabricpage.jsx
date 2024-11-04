@@ -184,19 +184,38 @@ function FabricPage() {
     (event, edge) => {
       event.stopPropagation();
       const mapNodeId = edge.source;
-      const mapType = nodes.find((node) => node.id === mapNodeId)?.data
-        ?.mapType;
+      const targetNodeId = edge.target;
+      const targetHandleIndex = edge.targetHandle?.replace("handle-", "");
 
-      if (mapType) {
+      if (!targetHandleIndex) return;
+
+      const targetNode = nodes.find((node) => node.id === targetNodeId);
+      const targetMapType = targetNode?.data?.maps[parseInt(targetHandleIndex)];
+
+      if (targetMapType) {
         setNodes((nds) =>
           nds.map((node) =>
             node.id === mapNodeId
-              ? { ...node, data: { ...node.data, mapType: null } }
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    mapType: Array.isArray(node.data.mapType)
+                      ? node.data.mapType.filter(
+                          (type) => type !== targetMapType
+                        )
+                      : null,
+                  },
+                }
               : node
           )
         );
-        disconnectMap(mapType);
+
+        // Disconnect the specific map type
+        disconnectMap(targetMapType);
       }
+
+      // Remove the edge
       setEdges((eds) => eds.filter((e) => e.id !== edge.id));
     },
     [nodes, setNodes, setEdges, disconnectMap]

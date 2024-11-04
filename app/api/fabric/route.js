@@ -33,7 +33,7 @@ export async function POST(request) {
       roughnessMapUrl: formData.get("Roughness") || null,
       anisotropyMapUrl: formData.get("Anisotropy") || null,
       diffuseMapUrll: formData.get("Diffuse") || null, // Backup fields initialized as null
-      envMapUrll: formData.get("Normal") || null,
+      envMapUrll: formData.get("EnvMap") || null,
       refractionMapUrll: formData.get("Refraction") || null,
       bumpMapUrll: formData.get("Bump") || null,
       normalMapUrll: formData.get("Normal") || null,
