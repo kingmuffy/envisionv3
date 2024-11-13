@@ -133,7 +133,9 @@ const Preview = () => {
 
     loadModel();
   }, [uploadedModelPath]);
-
+  console.log("diffuseColor1", materialParams.diffuseColor);
+  console.log("sheenColor", materialParams.sheenColor);
+  console.log("emissiveColor", materialParams.diffuseColorEnabled);
   useEffect(() => {
     if (currentModel) {
       currentModel.traverse((child) => {
@@ -201,69 +203,69 @@ const Preview = () => {
       side: DoubleSide,
     });
 
-    material.onBeforeCompile = (shader) => {
-      shader.uniforms.fresnelColor = {
-        value: new THREE.Color(
-          materialParams.fresnelColor?.r || 1,
-          materialParams.fresnelColor?.g || 1,
-          materialParams.fresnelColor?.b || 1
-        ),
-      };
-      shader.uniforms.fresnelIntensity = {
-        value: materialParams.fresnelIntensity || 1.0,
-      };
-      shader.uniforms.fresnelPower = {
-        value: materialParams.fresnelPower || 2.0,
-      };
+    // material.onBeforeCompile = (shader) => {
+    //   shader.uniforms.fresnelColor = {
+    //     value: new THREE.Color(
+    //       materialParams.fresnelColor?.r || 1,
+    //       materialParams.fresnelColor?.g || 1,
+    //       materialParams.fresnelColor?.b || 1
+    //     ),
+    //   };
+    //   shader.uniforms.fresnelIntensity = {
+    //     value: materialParams.fresnelIntensity || 1.0,
+    //   };
+    //   shader.uniforms.fresnelPower = {
+    //     value: materialParams.fresnelPower || 2.0,
+    //   };
 
-      const disabled = 1; // Value that disables the Fresnel effect
-      shader.uniforms.fresnelBias = {
-        value: materialParams.fresnelEnabled
-          ? materialParams.fresnelBias || 0.1
-          : disabled,
-      };
+    //   const disabled = 1; // Value that disables the Fresnel effect
+    //   shader.uniforms.fresnelBias = {
+    //     value: materialParams.fresnelEnabled
+    //       ? materialParams.fresnelBias || 0.1
+    //       : disabled,
+    //   };
 
-      // Customize vertex shader
-      shader.vertexShader = `
-        varying vec3 vWorldPosition;
-        varying vec3 vNormalW;
-        ${shader.vertexShader}
-      `.replace(
-        `#include <worldpos_vertex>`,
-        `#include <worldpos_vertex>
-        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-        vNormalW = normalize(normalMatrix * normal);
-      `
-      );
+    //   // Customize vertex shader
+    //   shader.vertexShader = `
+    //     varying vec3 vWorldPosition;
+    //     varying vec3 vNormalW;
+    //     ${shader.vertexShader}
+    //   `.replace(
+    //     `#include <worldpos_vertex>`,
+    //     `#include <worldpos_vertex>
+    //     vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+    //     vNormalW = normalize(normalMatrix * normal);
+    //   `
+    //   );
 
-      // Customize fragment shader
-      shader.fragmentShader = `
-        uniform vec3 fresnelColor;
-        uniform float fresnelIntensity;
-        uniform float fresnelPower;
-        uniform float fresnelBias;
-        varying vec3 vWorldPosition;
-        varying vec3 vNormalW;
-  
-        float fresnelEffect(vec3 viewDir, vec3 normal) {
-          return fresnelIntensity * pow(1.0 - max(dot(viewDir, normal), fresnelBias), fresnelPower);
-        }
-  
-        ${shader.fragmentShader}
-      `.replace(
-        `#include <dithering_fragment>`,
-        `
-        vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-        float fresnelFactor = fresnelEffect(viewDir, vNormalW);
-        vec3 fresnelBlendedColor = mix(gl_FragColor.rgb, fresnelColor, fresnelFactor);
-        gl_FragColor.rgb = fresnelBlendedColor;
-        #include <dithering_fragment>
-        `
-      );
+    //   // Customize fragment shader
+    //   shader.fragmentShader = `
+    //     uniform vec3 fresnelColor;
+    //     uniform float fresnelIntensity;
+    //     uniform float fresnelPower;
+    //     uniform float fresnelBias;
+    //     varying vec3 vWorldPosition;
+    //     varying vec3 vNormalW;
 
-      // Save the shader reference for dynamic updates
-      material.userData.shader = shader;
-    };
+    //     float fresnelEffect(vec3 viewDir, vec3 normal) {
+    //       return fresnelIntensity * pow(1.0 - max(dot(viewDir, normal), fresnelBias), fresnelPower);
+    //     }
+
+    //     ${shader.fragmentShader}
+    //   `.replace(
+    //     `#include <dithering_fragment>`,
+    //     `
+    //     vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+    //     float fresnelFactor = fresnelEffect(viewDir, vNormalW);
+    //     vec3 fresnelBlendedColor = mix(gl_FragColor.rgb, fresnelColor, fresnelFactor);
+    //     gl_FragColor.rgb = fresnelBlendedColor;
+    //     #include <dithering_fragment>
+    //     `
+    //   );
+
+    //   // Save the shader reference for dynamic updates
+    //   material.userData.shader = shader;
+    // };
 
     return material;
   };
@@ -305,26 +307,25 @@ const Preview = () => {
   ]);
 
   const extractMaterialProperties = () => {
-    const sheenColor = new Color(
-      materialParams.sheenColor?.r || 0,
-      materialParams.sheenColor?.g || 0,
-      materialParams.sheenColor?.b || 0
-    );
+    // const sheenColor = new Color(
+    //   materialParams.sheenColor?.r || 0,
+    //   materialParams.sheenColor?.g || 0,
+    //   materialParams.sheenColor?.b || 0
+    // );
 
     const emissiveColor = new Color(
       materialParams.emissiveColor?.r || 0,
       materialParams.emissiveColor?.g || 0,
       materialParams.emissiveColor?.b || 0
     );
-    console.log("emisive collor", emissiveColor);
-
+    console.log("inthe check", materialParams.sheenColor);
     return {
       metalness: materialParams.metalness || 0,
       roughness: materialParams.roughness || 1,
       bumpScale: materialParams.bumpScale || 0,
       sheen: materialParams.sheenEnabled || false,
       sheenRoughness: materialParams.sheenRoughness || 1.0,
-      sheenColor: sheenColor,
+      sheenColor: new Color(materialParams.sheenColor),
       displacementScale: materialParams.displacementScale || 0,
       displacementBias: materialParams.displacementBias || 0,
       aoMapIntensity: materialParams.aoMapIntensity || 1,
@@ -396,7 +397,7 @@ const Preview = () => {
           }
         );
       } else {
-        resetSpecificMap(material, mapType); // Reset if map is not enabled or not connected
+        resetSpecificMap(material, mapType);
       }
     });
 
@@ -511,7 +512,6 @@ const Preview = () => {
     }
     material.needsUpdate = true;
   };
-
   return (
     <>
       <Box

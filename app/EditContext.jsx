@@ -9,8 +9,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
   const [connectedMaps, setConnectedMaps] = useState({});
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [materialParams, setMaterialParams] = useState({
-    materialName: initialMaterialParams.materialName || "", // Add materialName here
-
+    materialName: initialMaterialParams.materialName || "",
     bumpScale: initialMaterialParams.bumpScale || 0.0,
     sheen: initialMaterialParams.sheen || true,
     displacementScale: initialMaterialParams.displacementScale || 0.0,
@@ -23,7 +22,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     clearcoat: initialMaterialParams.clearcoat || 0.0,
     normalScaleX: initialMaterialParams.normalScaleX || 1.0,
     normalScaleY: initialMaterialParams.normalScaleY || 1.0,
-    sheenColor: initialMaterialParams.sheenColor || { r: 1, g: 1, b: 1 },
+    sheenColor: initialMaterialParams.sheenColor || null,
     sheenRoughness: initialMaterialParams.sheenRoughness || 1.0,
     sheenEnabled: initialMaterialParams.sheenEnabled || false,
     emissiveColor: initialMaterialParams.emissiveColor || { r: 0, g: 0, b: 0 },
@@ -32,6 +31,9 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     scaleY: initialMaterialParams.scaleY || 1.0,
     anisotropy: initialMaterialParams.anisotropy || 0.0,
     opacity: initialMaterialParams.opacity || 1.0,
+    diffuseColorEnabled: initialMaterialParams.diffuseColorEnabled || false,
+    sheenEnabled: initialMaterialParams.sheenEnabled,
+    diffuseColor: initialMaterialParams.diffuseColor || null,
   });
 
   const [materialId, setMaterialId] = useState(null);
@@ -48,7 +50,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
           ...prev,
           ...mapsData,
         }));
-
+        console.log("mapsDataFromContext", mapsData);
         setConnectedMaps({
           diffuseMapUrl: mapsData.diffuseMapUrl || null,
           bumpMapUrl: mapsData.bumpMapUrl || null,
@@ -63,6 +65,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
           anisotropyMapUrl: mapsData.anisotropyMapUrl || null,
           sheenMapUrl: mapsData.sheenMapUrl || null,
         });
+        console.log("mapsData", mapsData);
       } catch (error) {
         console.error("Error fetching maps:", error);
       }
@@ -71,27 +74,25 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     fetchMaterialParams();
   }, [materialId, updateTrigger]);
 
-  // In MapContext
-  // In MapContext
   const updateConnectedMaps = useCallback((mapType, url) => {
     setConnectedMaps((prev) => ({
       ...prev,
       [mapType]: url,
     }));
-    setUpdateTrigger((prev) => prev + 1); // Ensure immediate re-render
+    setUpdateTrigger((prev) => prev + 1);
   }, []);
 
   const disconnectMap = useCallback((mapType) => {
     setConnectedMaps((prev) => ({
       ...prev,
-      [mapType]: null, // Set the map URL to null to indicate removal
+      [mapType]: null,
     }));
-    setUpdateTrigger((prev) => prev + 1); // Trigger re-render in Preview
+    setUpdateTrigger((prev) => prev + 1);
   }, []);
 
   const updateMaterialParams = (param, value) => {
     setMaterialParams((prevParams) => {
-      if (param === "sheenColor" || param === "emissiveColor") {
+      if (param === "emissiveColor") {
         if (typeof value === "string" && value.startsWith("#")) {
           const color = new THREE.Color(value);
           return {

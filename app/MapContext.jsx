@@ -20,10 +20,10 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     clearcoat: initialMaterialParams.clearcoat || 0.0,
     normalScaleX: initialMaterialParams.normalScaleX || 1.0,
     normalScaleY: initialMaterialParams.normalScaleY || 1.0,
-    sheenColor: initialMaterialParams.sheenColor || { r: 1, g: 1, b: 1 },
+    sheenColor: initialMaterialParams.sheenColor || null,
     sheenRoughness: initialMaterialParams.sheenRoughness || 1.0,
     sheenEnabled: initialMaterialParams.sheenEnabled || false,
-    emissiveColor: initialMaterialParams.emissiveColor || 0x00000,
+    emissiveColor: initialMaterialParams.emissiveColor || { r: 1, g: 1, b: 1 },
     diffuseColor: initialMaterialParams.diffuseColor || null,
     envMapIntensity: initialMaterialParams.envMapIntensity || 0.0,
     scaleX: initialMaterialParams.scaleX || 1.0,
@@ -51,7 +51,7 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     metalnessMapEnabled: initialMaterialParams.metalnessMapEnabled || true,
     roughnessMapEnabled: initialMaterialParams.roughnessMapEnabled || true,
     anisotropyMapEnabled: initialMaterialParams.anisotropyMapEnabled || true,
-    fresnelEnabled: initialMaterialParams.fresnelEnabled || false, // Add this line
+    fresnelEnabled: initialMaterialParams.fresnelEnabled,
   });
 
   const updateConnectedMaps = (mapType, file) => {
@@ -70,14 +70,9 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
     });
     setUpdateTrigger1((prev) => prev + 1);
   };
-
   const updateMaterialParams = (param, value) => {
     setMaterialParams((prevParams) => {
-      if (
-        param === "sheenColor" ||
-        param === "emissiveColor" ||
-        param === "fresnelColor"
-      ) {
+      if (param === "emissiveColor" || param === "fresnelColor") {
         if (typeof value === "string" && value.startsWith("#")) {
           const color = new THREE.Color(value);
           return {
@@ -92,7 +87,10 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
         }
       }
       if (param === "diffuseColor") {
-        return { ...prevParams, [param]: value }; // Set hex color directly
+        return { ...prevParams, [param]: value };
+      }
+      if (param === "sheenColor") {
+        return { ...prevParams, [param]: value };
       }
       if (param === "diffuseColorEnabled" || param === "diffuseColor") {
         setUpdateTrigger1((prev) => prev + 1);
@@ -128,4 +126,3 @@ export const MapProvider = ({ children, initialMaterialParams = {} }) => {
 };
 
 export default MapProvider;
-//v2 with figma design

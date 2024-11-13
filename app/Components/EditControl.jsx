@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 import React, { useState, useContext } from "react";
+import * as THREE from "three";
 import PropTypes from "prop-types";
 import {
   Accordion,
@@ -44,7 +45,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import MaterialList from "./Dialog/MaterialList.jsx";
 import LightList from "./Dialog/LightList.jsx";
 import CameraList from "./Dialog/CameraList.jsx";
-import { ChromePicker } from "react-color"; // Import the ChromePicker
+import { ChromePicker } from "react-color";
 import axios from "axios";
 const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const {
@@ -72,6 +73,8 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const [displacementBias, setDisplacementBias] = useState(
     materialParams.displacementBias || 0
   );
+  const [expandedPanels, setExpandedPanels] = useState([]);
+
   const [metalness, setMetalness] = useState(materialParams.metalness || 0.0);
   const [roughness, setRoughness] = useState(materialParams.roughness || 0.0);
   const [emissive, setEmissive] = useState(
@@ -90,9 +93,13 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const [sheenColor, setSheenColor] = useState(
     materialParams.sheenColor || { r: 1, g: 1, b: 1 }
   );
+
   const [sheenEnabled, setSheenEnabled] = useState(
     materialParams.sheenEnabled || false
   );
+  const handleDiffuseColorChange = (color) => {
+    updateMaterialParams("diffuseColor", color.hex);
+  };
   const [emissiveColor, setEmissiveColor] = useState(
     materialParams.emissiveColor || { r: 0, g: 0, b: 0 }
   );
@@ -103,7 +110,12 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const [loading, setLoading] = useState(false);
   const [listData, setListData] = useState([]);
   const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setExpandedPanel(isExpanded ? panel : null);
+    setExpandedPanels(
+      (prevPanels) =>
+        isExpanded
+          ? [...prevPanels, panel] // Add panel to expanded array
+          : prevPanels.filter((p) => p !== panel) // Remove panel from expanded array if collapsed
+    );
   };
   const handleToggle = () => {
     setOpen(!open);
@@ -246,6 +258,10 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   const handleNormalYChange = (event, newValue) => {
     updateMaterialParams("normalScaleY", newValue);
   };
+  const handleDiffuseColorToggle = (event) => {
+    const isEnabled = event.target.checked;
+    updateMaterialParams("diffuseColorEnabled", isEnabled);
+  };
 
   const handleScaleXChange = (event, newValue) => {
     updateMaterialParams("scaleX", newValue);
@@ -300,17 +316,16 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
   };
 
   const handleSheenColorChange = (color) => {
-    setSheenColor(color.hex);
     updateMaterialParams("sheenColor", color.hex);
   };
   const handleEmissiveColorChange = (color) => {
     updateMaterialParams("emissiveColor", color.hex);
   };
 
-  const handleSheenToggle = (event) => {
-    setSheenEnabled(event.target.checked);
-    updateMaterialParams("sheenEnabled", event.target.checked);
-  };
+  // const handleSheenToggle = (event) => {
+  //   setSheenEnabled(event.target.checked);
+  //   updateMaterialParams("sheenEnabled", event.target.checked);
+  // };
   const handleAnisotropyChange = (event, newValue) => {
     updateMaterialParams("anisotropy", newValue);
   };
@@ -707,7 +722,7 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                   <Accordion
                     disableGutters
                     elevation={0}
-                    expanded={expandedPanel === control}
+                    expanded={expandedPanels.includes(control)}
                     onChange={handleAccordionChange(control)}
                     sx={{
                       border: "none",
@@ -731,7 +746,7 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                           gap: "8px",
                         }}
                       >
-                        {expandedPanel === control ? (
+                        {expandedPanels.includes(control) ? (
                           <ExpandMoreIcon sx={{ fontSize: "21px" }} />
                         ) : (
                           <ChevronRightIcon sx={{ fontSize: "21px" }} />
@@ -762,8 +777,7 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                       sx={{
                         padding: "0px",
                         marginTop: "2px",
-                        maxHeight: "120px",
-                        overflowY: "auto",
+                        overflowY: "visible",
                       }}
                     >
                       {control === "BUMP" && (
@@ -788,6 +802,40 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                       )}
                       {control === "DIFFUSE" && (
                         <>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              marginBottom: 2,
+                              gap: 2,
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                color: "#333",
+                                marginLeft: "20px",
+                                fontFamily: "Avenir, sans-serif",
+                              }}
+                            >
+                              Enable Diffuse Color
+                            </Typography>
+                            <Switch
+                              checked={
+                                materialParams.diffuseColorEnabled === "true"
+                              }
+                              onChange={() =>
+                                updateMaterialParams(
+                                  "diffuseColorEnabled",
+                                  materialParams.diffuseColorEnabled === "true"
+                                    ? "false"
+                                    : "true"
+                                )
+                              }
+                              color="primary"
+                            />
+                          </Box>
+
                           <Box
                             sx={{
                               display: "flex",
@@ -818,6 +866,53 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                               onChange={handleScaleYChange}
                               label="ScaleY"
                             />
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: "12px",
+                                fontWeight: "normal",
+                                color: "#333",
+                                marginRight: "15px",
+                                marginLeft: "10px",
+                              }}
+                            >
+                              Diffuse Color
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: "5px",
+                                width: "150px",
+                              }}
+                            >
+                              <ChromePicker
+                                color={materialParams.diffuseColor || "#a26130"}
+                                onChange={(color) =>
+                                  handleDiffuseColorChange(color)
+                                }
+                                styles={{
+                                  default: {
+                                    picker: {
+                                      width: "140px",
+                                      boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+                                      border: "1px solid #ccc",
+                                      borderRadius: "6px",
+                                    },
+                                  },
+                                }}
+                              />
+                            </Box>
                           </Box>
                         </>
                       )}
@@ -1055,8 +1150,15 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                           <FormControlLabel
                             control={
                               <Switch
-                                checked={sheenEnabled}
-                                onChange={handleSheenToggle}
+                                checked={materialParams.sheenEnabled === "true"}
+                                onChange={() =>
+                                  updateMaterialParams(
+                                    "sheenEnabled",
+                                    materialParams.sheenEnabled === "true"
+                                      ? "false"
+                                      : "true"
+                                  )
+                                }
                                 color="primary"
                               />
                             }
@@ -1104,7 +1206,8 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
                           >
                             <Typography>Sheen Color</Typography>
                             <ChromePicker
-                              color={materialParams.sheenColor || "#ffffff"}
+                              color={materialParams.sheenColor || "#000000"}
+                              disableAlpha
                               onChange={(color) =>
                                 handleSheenColorChange(color)
                               }
@@ -1188,8 +1291,7 @@ const ControlGUI = ({ addMapNode, id, setShowReactFlow }) => {
             </Button>
           ) : null}
         </Box>
-        {/* Dialog for loading the module */}
-        {/* Dialog for loading the module */}
+
         <Dialog open={isDialogOpen} onClose={handleDialogClose}>
           <DialogContent sx={{ minWidth: "500px", padding: "20px" }}>
             <Typography

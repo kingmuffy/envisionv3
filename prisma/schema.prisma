@@ -17,6 +17,7 @@ model Folderimport {
   fbxs            Fbxa[]
 }
 
+
 model Fbxa {
   id              String        @id @default(auto()) @map("_id") @db.ObjectId
   name            String?
@@ -69,7 +70,7 @@ model LightSettings {
   lightType     String
   intensity     Float
   position      Json? 
-  targetPosition Json?   // Add this field to store target position
+  targetPosition Json?   
   angle         Float?
   decay         Float?
   castShadow    Boolean
@@ -110,7 +111,8 @@ model FabricMap {
   anisotropyMapUrll      String?
   bumpScale             Float?   
   displacementScale     Float?   
-  emissiveIntensity     Float?   
+  emissiveIntensity     Float? 
+  emissiveColor           String?  
   metalness             Float?   
   roughness             Float?   
   displacementBias      Float?   
@@ -128,9 +130,21 @@ model FabricMap {
   scaleY                Float?
   sheenRoughness        Float?
   anisotropy            Float? 
-    envvMapUrl             String?
-    materialName           String?
-    nullMapUrl            String?
+  envvMapUrl             String?
+  materialName           String?
+  nullMapUrl            String?
+diffuseColorEnabled String?
+  ior                   Float?
+  refractionRatio       Float?
+  sheenEnabled           String?
+  emissiveColorR        Float?  
+  emissiveColorG        Float?  
+  emissiveColorB        Float?
+  sheenColorR           Float?   
+  sheenColorG           Float?
+  sheenColorB           Float?
+  diffuseColor          String?
+  sheenColor             String?
 
 
 }

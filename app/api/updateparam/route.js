@@ -39,6 +39,8 @@ export async function PUT(request) {
       scaleX: parseFloat(formData.get("scaleX")),
       scaleY: parseFloat(formData.get("scaleY")),
       materialName: formData.get("materialName"),
+      diffuseColorEnabled: formData.get("diffuseColorEnabled"),
+      diffuseColor: formData.get("diffuseColor"),
     };
 
     const updatedFabric = await prisma.fabricMap.update({

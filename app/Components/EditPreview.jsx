@@ -105,7 +105,8 @@ const Preview = ({ id }) => {
   const { cameras, activeCameraIndex, setActiveCamera, handleViewCamera } =
     useContext(CameraContext);
   const { lights } = useContext(LightContext);
-  const { materialParams, updateTrigger } = useContext(MapContext);
+  const { materialParams, updateTrigger, updateMaterialParams } =
+    useContext(MapContext);
   const [connectedMaps, setConnectedMaps] = useState({});
   const [currentModel, setCurrentModel] = useState(null);
   const [uploadedModelPath, setUploadedModelPath] = useState(null);
@@ -114,6 +115,9 @@ const Preview = ({ id }) => {
   const textureLoader = new TextureLoader();
   const orbitControlsRef = useRef();
 
+  const [diffuseColorEnabled, setDiffuseColorEnabled] = useState(
+    materialParams.diffuseColorEnabled || false
+  );
   useEffect(() => {
     const fetchMaps = async (id) => {
       try {
@@ -137,6 +141,11 @@ const Preview = ({ id }) => {
       fetchMaps(id);
     }
   }, [id, updateTrigger]);
+  useEffect(() => {
+    setDiffuseColorEnabled(materialParams.diffuseColorEnabled || false);
+  }, [materialParams.diffuseColorEnabled]);
+
+  // useEffect to set initial diffuseColorEnabled from materialParams
 
   const CameraUpdater = () => {
     const { camera } = useThree();
@@ -222,7 +231,13 @@ const Preview = ({ id }) => {
         }
       });
     }
-  }, [currentModel, connectedMaps, updateTrigger, materialParams]);
+  }, [
+    currentModel,
+    connectedMaps,
+    updateTrigger,
+    materialParams,
+    diffuseColorEnabled,
+  ]);
 
   const createMaterial = () => {
     return new MeshPhysicalMaterial({
@@ -234,33 +249,49 @@ const Preview = ({ id }) => {
   const handleCameraSelectChange = (event) => {
     const selectedIndex = event.target.value;
     setActiveCamera(selectedIndex);
-    handleViewCamera(); // Trigger view update for selected camera
+    handleViewCamera();
   };
 
   const extractMaterialProperties = () => {
-    const sheenColor = new Color(
-      materialParams.sheenColor?.r || 0,
-      materialParams.sheenColor?.g || 0,
-      materialParams.sheenColor?.b || 0
-    );
+    // const sheenColor = new Color(
+    //   materialParams.sheenColor?.r || 0,
+    //   materialParams.sheenColor?.g || 0,
+    //   materialParams.sheenColor?.b || 0
+    // );
 
     const emissiveColor = new Color(
       materialParams.emissiveColor?.r || 0,
       materialParams.emissiveColor?.g || 0,
       materialParams.emissiveColor?.b || 0
     );
+    console.log("sheencolor1", materialParams.sheenColor);
+    console.log(
+      "Sheen Color as Color instance:",
+      new Color(materialParams.sheenColor)
+    );
+    console.log("Material Params Object:", materialParams);
+    console.log("Sheen Enabled:", materialParams.sheenEnabled);
+    console.log("Sheen Color:", materialParams.sheenColor);
+    const sheenColor = materialParams.sheenColor
+      ? new Color(materialParams.sheenColor)
+      : new Color("#ff0000");
 
     return {
       metalness: materialParams.metalness || 0,
       roughness: materialParams.roughness || 1,
       bumpScale: materialParams.bumpScale || 0,
-      sheen: materialParams.sheenEnabled || false,
-      sheenRoughness: materialParams.sheenRoughness || 1.0,
+      sheen: materialParams.sheenEnabled === "true",
+      sheenRoughness: materialParams.sheenRoughness,
       sheenColor: sheenColor,
       displacementScale: materialParams.displacementScale || 0,
       displacementBias: materialParams.displacementBias || 0,
       aoMapIntensity: materialParams.aoMapIntensity || 1,
       emissive: emissiveColor,
+      color:
+        materialParams.diffuseColorEnabled === "true"
+          ? new Color(materialParams.diffuseColor)
+          : new Color("#F6F6F6"),
+      emissiveIntensity: materialParams.emissiveIntensity || 0,
       emissiveIntensity: materialParams.emissiveIntensity || 0,
       clearcoat: materialParams.clearcoat || 0,
       envMapIntensity: materialParams.envMapIntensity || 0,
@@ -275,6 +306,7 @@ const Preview = ({ id }) => {
       materialParams.normalScaleY || 1
     );
     material.needsUpdate = true;
+    console.log("Updated Material:", material);
   };
 
   const updateTextures = (material) => {

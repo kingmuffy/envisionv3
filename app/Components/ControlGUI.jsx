@@ -59,8 +59,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [uploadProgress, setUploadProgress] = useState({});
 
   const { updateMaterialParams } = useContext(MapContext);
-  //maps state
-  //state
+
   const [bumpScale, setBumpScale] = useState(0.0);
   const [normalX, setNormalX] = useState(1);
   const [normalY, setNormalY] = useState(1);
@@ -73,7 +72,6 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   const [emissive, setEmissive] = useState(0);
   const [envIntensity, setEnvIntensity] = useState(0);
   const [clearcoat, setClearcoat] = useState(0);
-  // const [specular, setSpecular] = useState(1);
   const [opacity, setOpacity] = useState(1);
   const [ao, setAo] = useState(1);
   const [sheen, setSheenIntensity] = useState(0);
@@ -132,7 +130,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   // };
   // State initialization at the top of ControlGUI
   const handleFresnelColorChange = (color) => {
-    updateMaterialParams("fresnelColor", color.rgb); // Store as {r, g, b}
+    updateMaterialParams("fresnelColor", color.rgb);
   };
 
   const handleFresnelIntensityChange = (event, newValue) => {
@@ -227,7 +225,19 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
 
         // Add material params
         for (const [paramName, value] of Object.entries(materialParams)) {
-          formData.append(paramName, value);
+          if (paramName === "emissiveColor" && value) {
+            formData.append("emissiveColorR", value.r || 0);
+            formData.append("emissiveColorG", value.g || 0);
+            formData.append("emissiveColorB", value.b || 0);
+          }
+          // else if (paramName === "sheenColor" && value) {
+          //   formData.append("sheenColorR", value.r || 0);
+          //   formData.append("sheenColorG", value.g || 0);
+          //   formData.append("sheenColorB", value.b || 0);
+          // }
+          else {
+            formData.append(paramName, value);
+          }
         }
 
         for (const [mapType, file] of Object.entries(connectedMaps)) {
@@ -249,12 +259,10 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
 
             console.log("Signed URL:", data.url);
 
-            // Step 2: Use XMLHttpRequest to upload the file to S3
             await uploadFileWithProgress(data.url, file, mapType, formData);
           }
         }
 
-        // Step 4: Send formData to the main API
         const response = await axios.post("/api/fabric", formData);
         if (response.data.status === "success") {
           setSnackbarMessage("Fabric data saved successfully!");
@@ -262,6 +270,18 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
           setSnackbarMessage("Failed to save fabric data.");
         }
         setSnackbarOpen(true);
+      } else if (selectedIcon === "sun") {
+        await handleSaveLights(lightSceneName);
+        setSnackbarMessage("Light settings saved successfully!");
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
+      } else if (selectedIcon === "camera") {
+        const response = await saveCameraSettings(cameraSceneName);
+        if (response.status === "success") {
+          setSnackbarMessage("Camera settings saved successfully!");
+        } else {
+          setSnackbarMessage("Failed to save camera settings.");
+        }
+        setSnackbarOpen(true); // Ensure snackbar is shown after setting the message.
       }
     } catch (error) {
       console.error("Error saving data:", error);
@@ -270,7 +290,6 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
     }
   };
 
-  // Helper function to upload with progress tracking
   const uploadFileWithProgress = (url, file, mapType, formData) => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -422,8 +441,9 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
   };
 
   const handleDiffuseColorToggle = (event) => {
-    const isEnabled = event.target.checked;
-    updateMaterialParams("diffuseColorEnabled", isEnabled);
+    const enabled = event.target.checked;
+    setDiffuseColorEnabled(enabled);
+    updateMaterialParams("diffuseColorEnabled", enabled);
   };
 
   const handleAnisotropyChange = (event, newValue) => {
@@ -848,7 +868,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                   <Accordion
                     disableGutters
                     elevation={0}
-                    expanded={expandedPanels.includes(control)} // Allow multiple open accordions
+                    expanded={expandedPanels.includes(control)}
                     onChange={handleAccordionChange(control)}
                     sx={{
                       border: "none",
@@ -903,7 +923,7 @@ const ControlGUI = ({ addMapNode, setShowReactFlow }) => {
                       sx={{
                         padding: "0px",
                         marginTop: "2px",
-                        overflowY: "visible", // Remove scrolling
+                        overflowY: "visible",
                       }}
                     >
                       {control === "BUMP" && (

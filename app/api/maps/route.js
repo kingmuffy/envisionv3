@@ -54,6 +54,10 @@ export async function GET(request) {
         envvMapUrl: true,
         materialName: true,
         createdAt: true,
+        diffuseColorEnabled: true,
+        diffuseColor: true,
+        sheenEnabled: true,
+        sheenColor: true,
       },
     });
 

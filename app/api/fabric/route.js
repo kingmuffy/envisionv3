@@ -24,7 +24,7 @@ export async function POST(request) {
       normalMapUrl: formData.get("Normal") || null,
       displacementMapUrl: formData.get("Displacement") || null,
       bumpMapUrl: formData.get("Bump") || null,
-      envMapUrl: formData.get("EnvMap") || null,
+      envMapUrl: formData.get("Environment") || null,
       clearcoatMapUrl: formData.get("Clearcoat") || null,
       emissiveMapUrl: formData.get("Emissive") || null,
       sheenMapUrl: formData.get("Sheen") || null,
@@ -33,18 +33,18 @@ export async function POST(request) {
       roughnessMapUrl: formData.get("Roughness") || null,
       anisotropyMapUrl: formData.get("Anisotropy") || null,
       diffuseMapUrll: formData.get("Diffuse") || null, // Backup fields initialized as null
-      envMapUrll: formData.get("EnvMap") || null,
+      envMapUrll: formData.get("Environment") || null,
       refractionMapUrll: formData.get("Refraction") || null,
       bumpMapUrll: formData.get("Bump") || null,
       normalMapUrll: formData.get("Normal") || null,
-      displacementMapUrll: null,
-      clearcoatMapUrll: null,
-      emissiveMapUrll: null,
-      sheenMapUrll: null,
-      aoMapUrll: null,
-      metalnessMapUrll: null,
-      roughnessMapUrll: null,
-      anisotropyMapUrll: null,
+      displacementMapUrll: formData.get("Displacement") || null,
+      clearcoatMapUrll: formData.get("Clearcoat") || null,
+      emissiveMapUrll: formData.get("Emissive") || null,
+      sheenMapUrll: formData.get("Sheen") || null,
+      aoMapUrll: formData.get("AO") || null,
+      metalnessMapUrll: formData.get("Metalness") || null,
+      roughnessMapUrll: formData.get("Roughness") || null,
+      anisotropyMapUrll: formData.get("Anisotropy") || null,
       // Other numeric and Boolean fields
       bumpScale: parseFloat(formData.get("bumpScale")) || null,
       displacementScale: parseFloat(formData.get("displacementScale")) || null,
@@ -64,11 +64,20 @@ export async function POST(request) {
       anisotropy: parseFloat(formData.get("anisotropy")) || null,
       scaleX: parseFloat(formData.get("scaleX")) || null,
       scaleY: parseFloat(formData.get("scaleY")) || null,
+      diffuseColorEnabled: formData.get("diffuseColorEnabled") || false,
+      sheenEnabled: formData.get("sheenEnabled") || false,
+      ior: parseFloat(formData.get("ior")) || null,
+      refractionRatio: parseFloat(formData.get("refractionRatio")) || null,
+      emissiveColorR: parseFloat(formData.get("emissiveColorR")) || null,
+      emissiveColorG: parseFloat(formData.get("emissiveColorG")) || null,
+      emissiveColorB: parseFloat(formData.get("emissiveColorB")) || null,
+      sheenColor: formData.get("sheenColor") || "#F6F6F6",
+
+      diffuseColor: formData.get("diffuseColor") || "#F6F6F6",
     };
 
     console.log("Final fabric data before saving to DB:", fabricData);
 
-    // Save the fabric data in Prisma
     const savedFabric = await prisma.fabricMap.create({
       data: fabricData,
     });
